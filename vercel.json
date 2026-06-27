@@ -1,0 +1,4 @@
+{
+  "buildCommand": "bun run cosmos:export",
+  "outputDirectory": "cosmos-export"
+}
