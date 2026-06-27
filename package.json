@@ -1,11 +1,36 @@
 {
-  "name": "monaco-code-editor",
-  "module": "src/index.ts",
-  "type": "module",
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  }
+	"name": "monaco-code-editor",
+	"module": "src/index.ts",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"dev": "cosmos",
+		"cosmos": "cosmos",
+		"cosmos:export": "cosmos-export",
+		"format": "biome format . --write",
+		"format:check": "biome format .",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@types/react": "^19.2.17",
+		"@types/react-dom": "^19.2.3",
+		"react": "^19.2.7",
+		"react-cosmos": "^7.3.0",
+		"react-cosmos-plugin-vite": "^7.3.0",
+		"react-dom": "^19.2.7",
+		"vite": "^8.1.0"
+	},
+	"peerDependencies": {
+		"react": ">=18",
+		"react-dom": ">=18"
+	},
+	"dependencies": {
+		"@monaco-editor/react": "^4.7.0",
+		"@typescript/ata": "^0.9.8",
+		"monaco-editor": "^0.55.1",
+		"typescript": "^6.0.3"
+	}
 }
