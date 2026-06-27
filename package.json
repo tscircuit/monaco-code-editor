@@ -1,11 +1,17 @@
 {
 	"name": "monaco-code-editor",
-	"module": "src/index.ts",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
 	},
 	"scripts": {
+		"build": "bun run build:lib",
+		"build:lib": "tsc --noEmit && tsup src/index.ts --format esm --dts --external react,react-dom,@monaco-editor/react,monaco-editor,@typescript/ata,typescript",
 		"dev": "cosmos",
 		"cosmos": "cosmos",
 		"cosmos:export": "cosmos-export",
@@ -23,6 +29,7 @@
 		"react-cosmos": "^7.3.0",
 		"react-cosmos-plugin-vite": "^7.3.0",
 		"react-dom": "^19.2.7",
+		"tsup": "^8.5.1",
 		"vite": "^8.1.0"
 	},
 	"peerDependencies": {

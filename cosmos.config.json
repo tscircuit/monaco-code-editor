@@ -1,7 +1,7 @@
 {
-	"fixturesDir": "examples",
-	"plugins": ["react-cosmos-plugin-vite"],
-	"vite": {
-		"configPath": "./vite.config.ts"
-	}
+  "fixturesDir": "examples",
+  "plugins": ["react-cosmos-plugin-vite"],
+  "vite": {
+    "configPath": "./vite.config.ts"
+  }
 }

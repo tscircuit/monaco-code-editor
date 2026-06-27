@@ -1,9 +1,9 @@
-import { CodeEditor } from "../src/CodeEditor";
+import { CodeEditor } from "../src/CodeEditor"
 
 export default (
-	<div style={{ height: "100vh", padding: "16px", background: "#0f1723" }}>
-		<CodeEditor
-			defaultValue={`export default () => (
+  <div style={{ height: "100vh", padding: "16px", background: "#0f1723" }}>
+    <CodeEditor
+      defaultValue={`export default () => (
   <board width="10mm" height="10mm">
     <resistor
       resistance="1k"
@@ -18,8 +18,8 @@ export default (
     />
   </board>
 )`}
-			language="typescript"
-			path="fixture.tsx"
-		/>
-	</div>
-);
+      language="typescript"
+      path="fixture.tsx"
+    />
+  </div>
+)
