@@ -280,8 +280,8 @@ export function WorkspaceCodeEditor({
       style={{ height }}
     >
       {showSidebar && (
-        <div className="w-[200px] shrink-0 overflow-y-auto border-r border-slate-200 bg-slate-50 text-[13px] font-sans">
-          <div className="flex items-center justify-between px-2.5 py-2 text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-500">
+        <div className="w-50 shrink-0 overflow-y-auto border-r border-slate-200 bg-slate-50 text-[13px] font-sans">
+          <div className="flex items-center justify-between px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
             <span>Files</span>
             {handleCreateFile && (
               <button
