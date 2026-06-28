@@ -1,9 +1,9 @@
 import Editor, { type Monaco, type OnChange } from "@monaco-editor/react"
-import { useEffect, useState, type ReactNode } from "react"
+import { type ReactNode } from "react"
 import type { editor } from "monaco-editor"
-import { defaultCodeEditorOptions, defaultEditorTheme } from "./editorTheme"
-import { ensureMonacoConfigured } from "./monacoSetup"
-import { acquireTscircuitTypes } from "./typeAcquisition"
+import { defaultCodeEditorOptions, defaultEditorTheme } from "../monaco/editorDefaults"
+import { useMonacoReady } from "../hooks/useMonacoReady"
+import { useTscircuitTypeAcquisition } from "../hooks/useTscircuitTypeAcquisition"
 
 export type CodeEditorProps = {
   className?: string
@@ -35,30 +35,11 @@ export function CodeEditor({
   value,
   width = "100%",
 }: CodeEditorProps) {
-  const [isMonacoReady, setIsMonacoReady] = useState(false)
+  const isMonacoReady = useMonacoReady()
 
-  useEffect(() => {
-    let isActive = true
-
-    void ensureMonacoConfigured().then(() => {
-      if (isActive) setIsMonacoReady(true)
-    })
-
-    return () => {
-      isActive = false
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!isMonacoReady) return
-
-    const source = value ?? defaultValue
-    const timer = window.setTimeout(() => {
-      void acquireTscircuitTypes(source)
-    }, 250)
-
-    return () => window.clearTimeout(timer)
-  }, [defaultValue, isMonacoReady, value])
+  useTscircuitTypeAcquisition(value ?? defaultValue, {
+    enabled: isMonacoReady,
+  })
 
   const handleChange: OnChange = (nextValue, event) => {
     onChange?.(nextValue ?? "", event)
