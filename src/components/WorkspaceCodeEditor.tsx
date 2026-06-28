@@ -378,7 +378,9 @@ function BinaryFileNotice({ downloadUrl }: { downloadUrl?: string }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 font-sans text-slate-500">
       <p className="font-semibold">Binary file</p>
-      <p className="text-[13px]">This file cannot be displayed in the editor.</p>
+      <p className="text-[13px]">
+        This file cannot be displayed in the editor.
+      </p>
       {downloadUrl && (
         <a
           href={downloadUrl}
