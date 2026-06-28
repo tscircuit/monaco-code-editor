@@ -23,11 +23,7 @@ class TokenizerState implements monaco.languages.IState {
   }
 
   equals(other: monaco.languages.IState) {
-    return (
-      other instanceof TokenizerState &&
-      other === this &&
-      other.ruleStack === this.ruleStack
-    )
+    return other instanceof TokenizerState && other.ruleStack === this.ruleStack
   }
 }
 

@@ -4,11 +4,19 @@ type TypeScriptLanguageServiceDefaults = {
   getCompilerOptions(): Record<string, unknown>
   setCompilerOptions(options: Record<string, unknown>): void
   setDiagnosticsOptions(options: Record<string, unknown>): void
+  setEagerModelSync?(value: boolean): void
 }
 
 type TypeScriptApi = {
   JsxEmit: {
     ReactJSX: number
+  }
+  ModuleKind: {
+    ESNext: number
+  }
+  ModuleResolutionKind: {
+    Bundler: number
+    NodeJs: number
   }
   ScriptTarget: {
     ES2022: number
@@ -37,6 +45,11 @@ export function configureMonacoTypeScript() {
     allowJs: true,
     allowNonTsExtensions: true,
     jsx: typescript.JsxEmit.ReactJSX,
+    module: typescript.ModuleKind.ESNext,
+    moduleResolution:
+      typescript.ModuleResolutionKind.Bundler ??
+      typescript.ModuleResolutionKind.NodeJs,
+    resolveJsonModule: true,
     target: typescript.ScriptTarget.ES2022,
   })
 
@@ -45,6 +58,8 @@ export function configureMonacoTypeScript() {
     noSyntaxValidation: false,
     onlyVisible: false,
   })
+
+  typescript.typescriptDefaults.setEagerModelSync?.(true)
 
   isConfigured = true
 }

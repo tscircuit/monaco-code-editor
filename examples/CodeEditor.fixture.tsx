@@ -1,4 +1,4 @@
-import { CodeEditor } from "../src/CodeEditor"
+import { CodeEditor } from "../src/components/CodeEditor"
 
 export default (
   <div
