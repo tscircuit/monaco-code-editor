@@ -3,14 +3,15 @@ import * as monaco from "monaco-editor"
 type TypeScriptLanguageServiceDefaults = {
   getCompilerOptions(): Record<string, unknown>
   setCompilerOptions(options: Record<string, unknown>): void
+  setDiagnosticsOptions(options: Record<string, unknown>): void
 }
 
 type TypeScriptApi = {
   JsxEmit: {
-    Preserve: number
+    ReactJSX: number
   }
   ScriptTarget: {
-    ESNext: number
+    ES2022: number
   }
   typescriptDefaults: TypeScriptLanguageServiceDefaults
 }
@@ -33,10 +34,16 @@ export function configureMonacoTypeScript() {
 
   typescript.typescriptDefaults.setCompilerOptions({
     ...compilerOptions,
+    allowJs: true,
     allowNonTsExtensions: true,
-    jsx: typescript.JsxEmit.Preserve,
-    moduleResolution: 100,
-    target: typescript.ScriptTarget.ESNext,
+    jsx: typescript.JsxEmit.ReactJSX,
+    target: typescript.ScriptTarget.ES2022,
+  })
+
+  typescript.typescriptDefaults.setDiagnosticsOptions({
+    noSemanticValidation: false,
+    noSyntaxValidation: false,
+    onlyVisible: false,
   })
 
   isConfigured = true

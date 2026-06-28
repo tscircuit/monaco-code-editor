@@ -1,30 +1,9 @@
-import Editor, {
-  loader,
-  type Monaco,
-  type OnChange,
-} from "@monaco-editor/react"
-import { useEffect, type ReactNode } from "react"
-import * as monaco from "monaco-editor"
+import Editor, { type Monaco, type OnChange } from "@monaco-editor/react"
+import { useEffect, useState, type ReactNode } from "react"
 import type { editor } from "monaco-editor"
-import { configureMonacoTypeScript } from "./monacoTypeScript"
+import { defaultCodeEditorOptions, defaultEditorTheme } from "./editorTheme"
+import { ensureMonacoConfigured } from "./monacoSetup"
 import { acquireTscircuitTypes } from "./typeAcquisition"
-
-loader.config({ monaco })
-configureMonacoTypeScript()
-
-const defaultOptions: editor.IStandaloneEditorConstructionOptions = {
-  automaticLayout: true,
-  fontFamily:
-    "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-  fontLigatures: true,
-  fontSize: 14,
-  minimap: { enabled: false },
-  padding: { top: 16, bottom: 16 },
-  scrollBeyondLastLine: false,
-  smoothScrolling: true,
-  tabSize: 2,
-  wordWrap: "on",
-}
 
 export type CodeEditorProps = {
   className?: string
@@ -39,7 +18,6 @@ export type CodeEditorProps = {
   onMount?: (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => void
   options?: editor.IStandaloneEditorConstructionOptions
   path?: string
-  theme?: string
   value?: string
   width?: number | string
 }
@@ -54,21 +32,40 @@ export function CodeEditor({
   onMount,
   options,
   path,
-  theme = "vs-light",
   value,
   width = "100%",
 }: CodeEditorProps) {
+  const [isMonacoReady, setIsMonacoReady] = useState(false)
+
   useEffect(() => {
+    let isActive = true
+
+    void ensureMonacoConfigured().then(() => {
+      if (isActive) setIsMonacoReady(true)
+    })
+
+    return () => {
+      isActive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isMonacoReady) return
+
     const source = value ?? defaultValue
     const timer = window.setTimeout(() => {
       void acquireTscircuitTypes(source)
     }, 250)
 
     return () => window.clearTimeout(timer)
-  }, [defaultValue, value])
+  }, [defaultValue, isMonacoReady, value])
 
   const handleChange: OnChange = (nextValue, event) => {
     onChange?.(nextValue ?? "", event)
+  }
+
+  if (!isMonacoReady) {
+    return <>{loading}</>
   }
 
   return (
@@ -82,13 +79,13 @@ export function CodeEditor({
       loading={loading}
       onChange={handleChange}
       onMount={onMount}
-      options={{ ...defaultOptions, ...options }}
+      options={{ ...defaultCodeEditorOptions, ...options }}
       path={path}
-      theme={theme}
+      theme={defaultEditorTheme}
       value={value}
       width={width}
     />
   )
 }
 
-export { defaultOptions as defaultCodeEditorOptions }
+export { defaultCodeEditorOptions }
