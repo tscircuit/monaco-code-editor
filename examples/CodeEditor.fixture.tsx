@@ -1,7 +1,13 @@
 import { CodeEditor } from "../src/CodeEditor"
 
 export default (
-  <div style={{ height: "100vh", padding: "16px", background: "#0f1723" }}>
+  <div
+    style={{
+      height: "100vh",
+      padding: "16px",
+      background: "#111827",
+    }}
+  >
     <CodeEditor
       defaultValue={`export default () => (
   <board width="10mm" height="10mm">
@@ -20,6 +26,9 @@ export default (
 )`}
       language="typescript"
       path="fixture.tsx"
+      options={{
+        roundedSelection: false,
+      }}
     />
   </div>
 )
