@@ -78,7 +78,9 @@ export function useWorkspaceFiles({
         file.path === oldFilename ? { ...file, path: newFilename } : file,
       ),
     )
-    setCurrentFile((current) => (current === oldFilename ? newFilename : current))
+    setCurrentFile((current) =>
+      current === oldFilename ? newFilename : current,
+    )
     return { fileRenamed: true }
   }
 

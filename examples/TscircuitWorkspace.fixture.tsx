@@ -1,4 +1,7 @@
-import { WorkspaceCodeEditor, type EditorFile } from "../src/components/WorkspaceCodeEditor"
+import {
+  WorkspaceCodeEditor,
+  type EditorFile,
+} from "../src/components/WorkspaceCodeEditor"
 import { useWorkspaceFiles } from "../src/hooks/useWorkspaceFiles"
 
 const initialFiles: EditorFile[] = [

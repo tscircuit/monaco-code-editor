@@ -1,7 +1,10 @@
 import Editor, { type Monaco, type OnChange } from "@monaco-editor/react"
 import { type ReactNode } from "react"
 import type { editor } from "monaco-editor"
-import { defaultCodeEditorOptions, defaultEditorTheme } from "../monaco/editorDefaults"
+import {
+  defaultCodeEditorOptions,
+  defaultEditorTheme,
+} from "../monaco/editorDefaults"
 import { useMonacoReady } from "../hooks/useMonacoReady"
 import { useTscircuitTypeAcquisition } from "../hooks/useTscircuitTypeAcquisition"
 

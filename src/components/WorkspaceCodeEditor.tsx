@@ -1,7 +1,10 @@
 import Editor, { type OnChange, type OnMount } from "@monaco-editor/react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import * as monaco from "monaco-editor"
-import { defaultCodeEditorOptions, defaultEditorTheme } from "../monaco/editorDefaults"
+import {
+  defaultCodeEditorOptions,
+  defaultEditorTheme,
+} from "../monaco/editorDefaults"
 import { useMonacoReady } from "../hooks/useMonacoReady"
 import { useTscircuitTypeAcquisition } from "../hooks/useTscircuitTypeAcquisition"
 import {
@@ -28,7 +31,10 @@ export type CreateFileProps = {
   openFile?: boolean
 }
 export type CreateFileResult = { newFileCreated: boolean }
-export type DeleteFileProps = { filename: string; onError: (error: Error) => void }
+export type DeleteFileProps = {
+  filename: string
+  onError: (error: Error) => void
+}
 export type DeleteFileResult = { fileDeleted: boolean }
 export type RenameFileProps = {
   oldFilename: string
@@ -128,10 +134,15 @@ export function WorkspaceCodeEditor({
   currentContentRef.current = currentContent
   const currentFileIsBinary = currentFileData?.isBinary === true
 
-  const editorOptions = useMemo<monaco.editor.IStandaloneEditorConstructionOptions>(
-    () => ({ ...defaultCodeEditorOptions, readOnly: readOnly || isSaving, ...options }),
-    [readOnly, isSaving, options],
-  )
+  const editorOptions =
+    useMemo<monaco.editor.IStandaloneEditorConstructionOptions>(
+      () => ({
+        ...defaultCodeEditorOptions,
+        readOnly: readOnly || isSaving,
+        ...options,
+      }),
+      [readOnly, isSaving, options],
+    )
 
   // Dispose every model this component created when it unmounts.
   useEffect(() => {
@@ -161,7 +172,8 @@ export function WorkspaceCodeEditor({
         const stripped = resource.path.replace(/^\/+/, "")
         const file = filesRef.current.find(
           (candidate) =>
-            candidate.path === stripped || `/${candidate.path}` === resource.path,
+            candidate.path === stripped ||
+            `/${candidate.path}` === resource.path,
         )
         if (!file) return false
 
@@ -260,7 +272,10 @@ export function WorkspaceCodeEditor({
   }
 
   return (
-    <div className={className} style={{ display: "flex", height, minHeight: 0 }}>
+    <div
+      className={className}
+      style={{ display: "flex", height, minHeight: 0 }}
+    >
       {showSidebar && (
         <div
           style={{
@@ -433,7 +448,9 @@ function BinaryFileNotice({ downloadUrl }: { downloadUrl?: string }) {
       }}
     >
       <p style={{ fontWeight: 600 }}>Binary file</p>
-      <p style={{ fontSize: 13 }}>This file cannot be displayed in the editor.</p>
+      <p style={{ fontSize: 13 }}>
+        This file cannot be displayed in the editor.
+      </p>
       {downloadUrl && (
         <a href={downloadUrl} download>
           Download file
