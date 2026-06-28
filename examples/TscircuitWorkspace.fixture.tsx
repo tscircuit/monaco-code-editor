@@ -1,3 +1,4 @@
+import "../src/styles.css"
 import {
   WorkspaceCodeEditor,
   type EditorFile,
@@ -107,7 +108,7 @@ export default function TscircuitWorkspaceFixture() {
   })
 
   return (
-    <div style={{ height: "100vh", background: "#ffffff" }}>
+    <div className="h-screen bg-white">
       <WorkspaceCodeEditor {...workspace} />
     </div>
   )
