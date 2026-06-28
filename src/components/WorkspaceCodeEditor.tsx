@@ -70,6 +70,9 @@ export type WorkspaceCodeEditorProps = {
   options?: monaco.editor.IStandaloneEditorConstructionOptions
 }
 
+const sidebarIconButtonClassName =
+  "rounded px-1 py-0.5 text-xs leading-none transition hover:bg-slate-200/80 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+
 const isCodeFile = (path: string | null): path is string =>
   !!path && /\.(ts|tsx|js|jsx)$/.test(path)
 
@@ -273,41 +276,19 @@ export function WorkspaceCodeEditor({
 
   return (
     <div
-      className={className}
-      style={{ display: "flex", height, minHeight: 0 }}
+      className={`flex min-h-0 ${className ?? ""}`.trim()}
+      style={{ height }}
     >
       {showSidebar && (
-        <div
-          style={{
-            width: 200,
-            flexShrink: 0,
-            borderRight: "1px solid #e5e7eb",
-            background: "#f9fafb",
-            overflowY: "auto",
-            fontSize: 13,
-            fontFamily: "ui-sans-serif, system-ui, sans-serif",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "8px 10px",
-              fontWeight: 600,
-              color: "#6b7280",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              fontSize: 11,
-            }}
-          >
+        <div className="w-[200px] shrink-0 overflow-y-auto border-r border-slate-200 bg-slate-50 text-[13px] font-sans">
+          <div className="flex items-center justify-between px-2.5 py-2 text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-500">
             <span>Files</span>
             {handleCreateFile && (
               <button
                 type="button"
                 onClick={promptCreateFile}
                 title="New file"
-                style={sidebarIconButtonStyle}
+                className={sidebarIconButtonClassName}
               >
                 +
               </button>
@@ -318,32 +299,21 @@ export function WorkspaceCodeEditor({
             return (
               <div
                 key={file.path}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                  padding: "4px 8px",
-                  cursor: "pointer",
-                  background: isActive ? "#e0e7ff" : "transparent",
-                  color: isActive ? "#1e3a8a" : "#374151",
-                }}
+                className={`flex cursor-pointer items-center gap-1 px-2 py-1 ${
+                  isActive
+                    ? "bg-indigo-100 text-indigo-900"
+                    : "text-slate-700 hover:bg-slate-100"
+                }`}
                 onClick={() => onFileSelect(file.path)}
               >
-                <span
-                  style={{
-                    flex: 1,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
+                <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
                   {file.path}
                 </span>
                 {handleRenameFile && (
                   <button
                     type="button"
                     title="Rename"
-                    style={sidebarIconButtonStyle}
+                    className={sidebarIconButtonClassName}
                     onClick={(event) => {
                       event.stopPropagation()
                       promptRenameFile(file.path)
@@ -356,7 +326,7 @@ export function WorkspaceCodeEditor({
                   <button
                     type="button"
                     title="Delete"
-                    style={sidebarIconButtonStyle}
+                    className={sidebarIconButtonClassName}
                     onClick={(event) => {
                       event.stopPropagation()
                       confirmDeleteFile(file.path)
@@ -371,19 +341,9 @@ export function WorkspaceCodeEditor({
         </div>
       )}
 
-      <div style={{ flex: 1, minWidth: 0, minHeight: 0, position: "relative" }}>
+      <div className="relative min-h-0 min-w-0 flex-1">
         {isStreaming ? (
-          <pre
-            style={{
-              margin: 0,
-              padding: 16,
-              height: "100%",
-              overflow: "auto",
-              fontFamily: "ui-monospace, monospace",
-              fontSize: 12,
-              whiteSpace: "pre-wrap",
-            }}
-          >
+          <pre className="m-0 h-full overflow-auto whitespace-pre-wrap p-4 font-mono text-xs">
             {currentContent}
           </pre>
         ) : currentFileIsBinary ? (
@@ -406,28 +366,9 @@ export function WorkspaceCodeEditor({
   )
 }
 
-const sidebarIconButtonStyle: React.CSSProperties = {
-  border: "none",
-  background: "transparent",
-  cursor: "pointer",
-  color: "inherit",
-  fontSize: 12,
-  lineHeight: 1,
-  padding: "2px 4px",
-}
-
 function CenteredMessage({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        display: "grid",
-        placeItems: "center",
-        height: "100%",
-        color: "#9ca3af",
-        fontFamily: "ui-sans-serif, system-ui, sans-serif",
-        fontSize: 14,
-      }}
-    >
+    <div className="grid h-full place-items-center font-sans text-sm text-slate-400">
       {children}
     </div>
   )
@@ -435,24 +376,15 @@ function CenteredMessage({ children }: { children: React.ReactNode }) {
 
 function BinaryFileNotice({ downloadUrl }: { downloadUrl?: string }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100%",
-        gap: 12,
-        color: "#6b7280",
-        fontFamily: "ui-sans-serif, system-ui, sans-serif",
-      }}
-    >
-      <p style={{ fontWeight: 600 }}>Binary file</p>
-      <p style={{ fontSize: 13 }}>
-        This file cannot be displayed in the editor.
-      </p>
+    <div className="flex h-full flex-col items-center justify-center gap-3 font-sans text-slate-500">
+      <p className="font-semibold">Binary file</p>
+      <p className="text-[13px]">This file cannot be displayed in the editor.</p>
       {downloadUrl && (
-        <a href={downloadUrl} download>
+        <a
+          href={downloadUrl}
+          download
+          className="text-sm text-blue-600 underline underline-offset-2 hover:text-blue-700"
+        >
           Download file
         </a>
       )}

@@ -1,13 +1,8 @@
+import "../src/styles.css"
 import { CodeEditor } from "../src/components/CodeEditor"
 
 export default (
-  <div
-    style={{
-      height: "100vh",
-      padding: "16px",
-      background: "#111827",
-    }}
-  >
+  <div className="h-screen bg-slate-900 p-4">
     <CodeEditor
       defaultValue={`export default () => (
   <board width="10mm" height="10mm">
