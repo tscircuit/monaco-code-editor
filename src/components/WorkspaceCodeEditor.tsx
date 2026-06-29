@@ -1,4 +1,5 @@
 import Editor, { type OnChange, type OnMount } from "@monaco-editor/react"
+import { PanelRightClose } from "lucide-react"
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import * as monaco from "monaco-editor"
 import {
@@ -11,6 +12,15 @@ import {
   createMonacoWorkspaceModelManager,
   type MonacoWorkspaceModelManager,
 } from "../monaco/monacoWorkspace"
+import { isHiddenFile } from "../utils/isHiddenFile"
+import { FileSidebar } from "./FileSidebar"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select"
 
 export type EditorFile = {
   path: string
@@ -70,9 +80,6 @@ export type WorkspaceCodeEditorProps = {
   options?: monaco.editor.IStandaloneEditorConstructionOptions
 }
 
-const sidebarIconButtonClassName =
-  "rounded px-1 py-0.5 text-xs leading-none transition hover:bg-slate-200/80 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
-
 const isCodeFile = (path: string | null): path is string =>
   !!path && /\.(ts|tsx|js|jsx)$/.test(path)
 
@@ -110,6 +117,7 @@ export function WorkspaceCodeEditor({
   const isReady = useMonacoReady()
   const [editorReady, setEditorReady] = useState(false)
   const [workspaceModelsReady, setWorkspaceModelsReady] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
   const managerRef = useRef<MonacoWorkspaceModelManager | null>(null)
@@ -144,6 +152,16 @@ export function WorkspaceCodeEditor({
         .filter((file) => !file.isBinary)
         .map((file) => ({ path: file.path, content: file.content })),
     [files],
+  )
+
+  // Files offered in the top-bar dropdown: hide noise (lockfiles, dist, …) but
+  // always keep the active file selectable even when it is itself hidden.
+  const dropdownFiles = useMemo(
+    () =>
+      files.filter(
+        (file) => !isHiddenFile(file.path) || file.path === currentFile,
+      ),
+    [files, currentFile],
   )
 
   const editorOptions =
@@ -266,124 +284,124 @@ export function WorkspaceCodeEditor({
     onFileContentChanged?.(currentFile, nextValue)
   }
 
-  const promptCreateFile = () => {
-    if (!handleCreateFile) return
-    const newFileName = window.prompt("New file name")?.trim()
-    if (!newFileName) return
-    handleCreateFile({
-      newFileName,
-      openFile: true,
-      onError: (error) => window.alert(error.message),
-    })
-  }
+  let editorBody: React.ReactNode
 
-  const promptRenameFile = (path: string) => {
-    if (!handleRenameFile) return
-    const newFilename = window.prompt("Rename file", path)?.trim()
-    if (!newFilename || newFilename === path) return
-    handleRenameFile({
-      oldFilename: path,
-      newFilename,
-      onError: (error) => window.alert(error.message),
-    })
-  }
-
-  const confirmDeleteFile = (path: string) => {
-    if (!handleDeleteFile) return
-    if (!window.confirm(`Delete ${path}?`)) return
-    handleDeleteFile({
-      filename: path,
-      onError: (error) => window.alert(error.message),
-    })
+  if (isStreaming) {
+    editorBody = (
+      <pre className="m-0 h-full overflow-auto whitespace-pre-wrap p-4 font-mono text-xs">
+        {currentContent}
+      </pre>
+    )
+  } else if (currentFileIsBinary) {
+    editorBody = <BinaryFileNotice downloadUrl={currentFileData?.downloadUrl} />
+  } else if (!isReady || !workspaceModelsReady || isPriorityFilePending) {
+    editorBody = <CenteredMessage>Loading editor…</CenteredMessage>
+  } else if (currentFile) {
+    editorBody = (
+      <Editor
+        height="100%"
+        theme={defaultEditorTheme}
+        options={editorOptions}
+        onMount={handleMount}
+        onChange={handleChange}
+      />
+    )
+  } else {
+    editorBody = (
+      <CenteredMessage>Select a file to start editing</CenteredMessage>
+    )
   }
 
   return (
     <div
-      className={`flex min-h-0 ${className ?? ""}`.trim()}
+      className={`workspace-editor-shell flex h-full w-full min-h-0 overflow-hidden ${className ?? ""}`.trim()}
       style={{ height }}
     >
       {showSidebar && (
-        <div className="w-50 shrink-0 overflow-y-auto border-r border-slate-200 bg-slate-50 text-[13px] font-sans">
-          <div className="flex items-center justify-between px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-            <span>Files</span>
-            {handleCreateFile && (
-              <button
-                type="button"
-                onClick={promptCreateFile}
-                title="New file"
-                className={sidebarIconButtonClassName}
-              >
-                +
-              </button>
-            )}
-          </div>
-          {files.map((file) => {
-            const isActive = file.path === currentFile
-            return (
-              <div
-                key={file.path}
-                className={`flex cursor-pointer items-center gap-1 px-2 py-1 ${
-                  isActive
-                    ? "bg-indigo-100 text-indigo-900"
-                    : "text-slate-700 hover:bg-slate-100"
-                }`}
-                onClick={() => onFileSelect(file.path)}
-              >
-                <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                  {file.path}
-                </span>
-                {handleRenameFile && (
-                  <button
-                    type="button"
-                    title="Rename"
-                    className={sidebarIconButtonClassName}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      promptRenameFile(file.path)
-                    }}
-                  >
-                    ✎
-                  </button>
-                )}
-                {handleDeleteFile && (
-                  <button
-                    type="button"
-                    title="Delete"
-                    className={sidebarIconButtonClassName}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      confirmDeleteFile(file.path)
-                    }}
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            )
-          })}
-        </div>
+        <FileSidebar
+          files={files}
+          currentFile={currentFile}
+          onFileSelect={onFileSelect}
+          handleCreateFile={handleCreateFile}
+          handleDeleteFile={handleDeleteFile}
+          handleRenameFile={handleRenameFile}
+          open={sidebarOpen}
+          onOpenChange={setSidebarOpen}
+        />
       )}
 
-      <div className="relative min-h-0 min-w-0 flex-1">
-        {isStreaming ? (
-          <pre className="m-0 h-full overflow-auto whitespace-pre-wrap p-4 font-mono text-xs">
-            {currentContent}
-          </pre>
-        ) : currentFileIsBinary ? (
-          <BinaryFileNotice downloadUrl={currentFileData?.downloadUrl} />
-        ) : !isReady || !workspaceModelsReady || isPriorityFilePending ? (
-          <CenteredMessage>Loading editor…</CenteredMessage>
-        ) : currentFile ? (
-          <Editor
-            height="100%"
-            theme={defaultEditorTheme}
-            options={editorOptions}
-            onMount={handleMount}
-            onChange={handleChange}
+      <div className="flex h-full min-w-0 flex-1 flex-col">
+        {showSidebar && (
+          <EditorTopBar
+            sidebarOpen={sidebarOpen}
+            onShowSidebar={() => setSidebarOpen(true)}
+            files={dropdownFiles}
+            currentFile={currentFile}
+            onFileSelect={onFileSelect}
           />
-        ) : (
-          <CenteredMessage>Select a file to start editing</CenteredMessage>
         )}
+
+        <div className="relative min-h-0 flex-1">{editorBody}</div>
+      </div>
+    </div>
+  )
+}
+
+function EditorTopBar({
+  sidebarOpen,
+  onShowSidebar,
+  files,
+  currentFile,
+  onFileSelect,
+}: {
+  sidebarOpen: boolean
+  onShowSidebar: () => void
+  files: EditorFile[]
+  currentFile: string | null
+  onFileSelect: (path: string) => void
+}) {
+  const fileLabelWidthClass = sidebarOpen
+    ? "max-w-[8rem] sm:max-w-[12rem]"
+    : "max-w-[12rem] sm:max-w-[16rem]"
+
+  return (
+    <div className="flex items-center gap-2 border-b border-gray-200 px-2 md:py-2">
+      <button
+        className={`overflow-hidden p-0 text-gray-400 scale-90 transition-[width,opacity] duration-300 ease-in-out ${
+          sidebarOpen ? "w-0 pointer-events-none opacity-0" : "w-6 opacity-100"
+        }`}
+        onClick={onShowSidebar}
+        title="Show files"
+        aria-label="Show files"
+      >
+        <div className="flex h-6 w-6 items-center justify-center">
+          <PanelRightClose />
+        </div>
+      </button>
+      <div>
+        <Select
+          value={currentFile ?? ""}
+          onValueChange={(value) => onFileSelect(value)}
+        >
+          <SelectTrigger
+            className={`h-7 w-32 bg-white px-3 select-none transition-[margin] duration-300 ease-in-out sm:w-48 ${
+              sidebarOpen ? "-ml-2" : "-ml-1"
+            }`}
+          >
+            <SelectValue placeholder="Select file" />
+          </SelectTrigger>
+          <SelectContent>
+            {files.map((file) => (
+              <SelectItem key={file.path} value={file.path} className="py-1">
+                <span
+                  className={`block truncate pr-1 text-xs ${fileLabelWidthClass}`}
+                >
+                  {file.path}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   )

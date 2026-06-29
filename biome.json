@@ -6,7 +6,14 @@
     "indentStyle": "space"
   },
   "files": {
-    "includes": ["**", "!**/cosmos-export", "!**/dist", "!**/package.json"]
+    "includes": [
+      "**",
+      "!**/cosmos-export",
+      "!**/dist",
+      "!**/package.json",
+      "!src/styles.css",
+      "!fixtures-support/assets/sparkfun-qwiic-micropressure/**"
+    ]
   },
   "javascript": {
     "formatter": {

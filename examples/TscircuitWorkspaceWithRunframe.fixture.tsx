@@ -6,106 +6,31 @@ import { resolveTscircuitEntrypoint } from "../fixtures-support/resolveTscircuit
 import { WorkspaceCodeEditor } from "../src/components/WorkspaceCodeEditor"
 import { useWorkspaceFiles } from "../src/hooks/useWorkspaceFiles"
 
+// Real SparkFun Qwiic MicroPressure Sensor board (copied verbatim from
+// ../sparkfun-boards) loaded as raw source so the tree sidebar shows a genuine
+// multi-folder package: an `imports/` folder of chip definitions alongside the
+// board entrypoint. We skip the board's `index.tsx` (it only re-exports the
+// circuit) and run the `.circuit.tsx` directly.
+import circuitSource from "../fixtures-support/assets/sparkfun-qwiic-micropressure/SparkFun-Qwiic-MicroPressure-Sensor.circuit.tsx?raw"
+import readmeSource from "../fixtures-support/assets/sparkfun-qwiic-micropressure/README.md?raw"
+import mprlsSource from "../fixtures-support/assets/sparkfun-qwiic-micropressure/imports/MPRLS0025PA00001A.tsx?raw"
+import sm04bSource from "../fixtures-support/assets/sparkfun-qwiic-micropressure/imports/SM04B_SRSS_TB_LF__SN.tsx?raw"
+import sm04b2Source from "../fixtures-support/assets/sparkfun-qwiic-micropressure/imports/SM04B_SRSS_TB_LF__SN2.tsx?raw"
+
+const BOARD_ENTRYPOINT = "SparkFun-Qwiic-MicroPressure-Sensor.circuit.tsx"
+
 const initialFiles: EditorFile[] = [
-  {
-    path: "index.tsx",
-    content: `import manualEdits from "./manual-edits.json"
-import { MPL3115A2R1 } from "./MPL3115A2R1"
-import { sel } from "tscircuit"
-
-export default () => (
-  <board width="15.24mm" height="17.78mm" manualEdits={manualEdits}>
-    <group>
-      <capacitor
-        name="C1"
-        footprint="cap0402"
-        capacitance="0.1uF"
-        pcbX={1.27}
-        pcbRotation={-90}
-      />
-      <resistor
-        name="R1"
-        resistance="1k"
-        footprint="0402"
-        pcbRotation={90}
-        connections={{ pin2: sel.net().SCL }}
-      />
-      <MPL3115A2R1
-        name="U1"
-        pcbRotation={90}
-        pcbY={5.08}
-        connections={{
-          INT1: sel.net().INT1,
-          INT2: sel.net().INT2,
-          SCL: sel.net().SCL,
-          SDA: sel.net().SDA,
-        }}
-      />
-      <netlabel
-        net="GND"
-        anchorSide="top"
-        connectsTo={[sel.C1.pin2]}
-        schY={2.1}
-      />
-    </group>
-  </board>
-)
-`,
-  },
-  {
-    path: "MPL3115A2R1.tsx",
-    content: `import type { ChipProps } from "@tscircuit/props"
-
-const pinLabels = {
-  pin1: ["VDD"],
-  pin2: ["CAP"],
-  pin3: ["GND"],
-  pin4: ["VDDIO"],
-  pin5: ["INT2"],
-  pin6: ["INT1"],
-  pin7: ["SDA"],
-  pin8: ["SCL"],
-} as const
-
-export const MPL3115A2R1 = (props: ChipProps<typeof pinLabels>) => {
-  return (
-    <chip
-      {...props}
-      schWidth={1.5}
-      pinLabels={pinLabels}
-      manufacturerPartNumber="MPL3115A2R1"
-      footprint={
-        <footprint>
-          <smtpad portHints={["pin1"]} pcbX="-1.875mm" pcbY="-1.30mm" width="0.60mm" height="1.50mm" shape="rect" />
-          <smtpad portHints={["pin2"]} pcbX="-0.625mm" pcbY="-1.30mm" width="0.60mm" height="1.50mm" shape="rect" />
-          <smtpad portHints={["pin3"]} pcbX="0.625mm" pcbY="-1.30mm" width="0.60mm" height="1.50mm" shape="rect" />
-          <smtpad portHints={["pin4"]} pcbX="1.875mm" pcbY="-1.30mm" width="0.60mm" height="1.50mm" shape="rect" />
-          <smtpad portHints={["pin5"]} pcbX="1.875mm" pcbY="1.30mm" width="0.60mm" height="1.50mm" shape="rect" />
-          <smtpad portHints={["pin6"]} pcbX="0.625mm" pcbY="1.30mm" width="0.60mm" height="1.50mm" shape="rect" />
-          <smtpad portHints={["pin7"]} pcbX="-0.625mm" pcbY="1.30mm" width="0.60mm" height="1.50mm" shape="rect" />
-          <smtpad portHints={["pin8"]} pcbX="-1.875mm" pcbY="1.30mm" width="0.60mm" height="1.50mm" shape="rect" />
-        </footprint>
-      }
-    />
-  )
-}
-`,
-  },
-  {
-    path: "manual-edits.json",
-    content: `{
-  "pcb_placements": [],
-  "schematic_placements": [],
-  "edit_events": []
-}
-`,
-  },
+  { path: BOARD_ENTRYPOINT, content: circuitSource },
+  { path: "imports/MPRLS0025PA00001A.tsx", content: mprlsSource },
+  { path: "imports/SM04B_SRSS_TB_LF__SN.tsx", content: sm04bSource },
+  { path: "imports/SM04B_SRSS_TB_LF__SN2.tsx", content: sm04b2Source },
+  { path: "README.md", content: readmeSource },
 ]
 
 export default function TscircuitWorkspaceWithRunframeFixture() {
   const workspace = useWorkspaceFiles({
     initialFiles,
-    initialCurrentFile: "index.tsx",
+    initialCurrentFile: BOARD_ENTRYPOINT,
   })
   const [lastRenderState, setLastRenderState] = useState<
     "idle" | "running" | "finished"
@@ -124,7 +49,7 @@ export default function TscircuitWorkspaceWithRunframeFixture() {
   const mainComponentPath = useMemo(
     () =>
       resolveTscircuitEntrypoint(workspace.files, workspace.currentFile) ??
-      "index.tsx",
+      BOARD_ENTRYPOINT,
     [workspace.files, workspace.currentFile],
   )
 
