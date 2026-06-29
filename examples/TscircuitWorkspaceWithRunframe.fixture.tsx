@@ -1,8 +1,8 @@
+import { RunFrame } from "@tscircuit/runframe/runner"
 import { useMemo, useState } from "react"
 import "../src/styles.css"
 import type { EditorFile } from "../src"
 import { resolveTscircuitEntrypoint } from "../fixtures-support/resolveTscircuitEntrypoint"
-import { SuspenseRunFrame } from "../src/components/SuspenseRunFrame"
 import { WorkspaceCodeEditor } from "../src/components/WorkspaceCodeEditor"
 import { useWorkspaceFiles } from "../src/hooks/useWorkspaceFiles"
 
@@ -135,16 +135,17 @@ export default function TscircuitWorkspaceWithRunframeFixture() {
           <WorkspaceCodeEditor {...workspace} />
         </div>
         <div className="min-h-0 flex flex-1 flex-col">
-          <SuspenseRunFrame
-            className="h-full flex-1"
-            fsMap={fsMap}
-            mainComponentPath={mainComponentPath}
-            showFileMenu={false}
-            showRunButton
-            forceLatestEvalVersion
-            onRenderStarted={() => setLastRenderState("running")}
-            onRenderFinished={() => setLastRenderState("finished")}
-          />
+          <div className="h-full flex-1">
+            <RunFrame
+              fsMap={fsMap}
+              mainComponentPath={mainComponentPath}
+              showFileMenu={false}
+              showRunButton
+              forceLatestEvalVersion
+              onRenderStarted={() => setLastRenderState("running")}
+              onRenderFinished={() => setLastRenderState("finished")}
+            />
+          </div>
         </div>
       </div>
     </div>
