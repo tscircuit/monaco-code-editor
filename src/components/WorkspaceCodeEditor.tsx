@@ -170,9 +170,7 @@ export function WorkspaceCodeEditor({
       return
     }
 
-    managerRef.current?.syncFiles(
-      workspaceFiles,
-    )
+    managerRef.current?.syncFiles(workspaceFiles)
     setWorkspaceModelsReady(true)
   }, [isReady, workspaceFiles])
 
