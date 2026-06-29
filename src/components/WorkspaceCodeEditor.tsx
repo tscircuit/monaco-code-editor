@@ -307,7 +307,9 @@ export function WorkspaceCodeEditor({
       />
     )
   } else {
-    editorBody = <CenteredMessage>Select a file to start editing</CenteredMessage>
+    editorBody = (
+      <CenteredMessage>Select a file to start editing</CenteredMessage>
+    )
   }
 
   return (
@@ -339,9 +341,7 @@ export function WorkspaceCodeEditor({
           />
         )}
 
-        <div className="relative min-h-0 flex-1">
-          {editorBody}
-        </div>
+        <div className="relative min-h-0 flex-1">{editorBody}</div>
       </div>
     </div>
   )
@@ -368,9 +368,7 @@ function EditorTopBar({
     <div className="flex items-center gap-2 border-b border-gray-200 px-2 md:py-2">
       <button
         className={`overflow-hidden p-0 text-gray-400 scale-90 transition-[width,opacity] duration-300 ease-in-out ${
-          sidebarOpen
-            ? "w-0 pointer-events-none opacity-0"
-            : "w-6 opacity-100"
+          sidebarOpen ? "w-0 pointer-events-none opacity-0" : "w-6 opacity-100"
         }`}
         onClick={onShowSidebar}
         title="Show files"
@@ -392,17 +390,17 @@ function EditorTopBar({
           >
             <SelectValue placeholder="Select file" />
           </SelectTrigger>
-            <SelectContent>
-              {files.map((file) => (
-                <SelectItem key={file.path} value={file.path} className="py-1">
-                  <span
-                    className={`block truncate pr-1 text-xs ${fileLabelWidthClass}`}
-                  >
-                    {file.path}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
+          <SelectContent>
+            {files.map((file) => (
+              <SelectItem key={file.path} value={file.path} className="py-1">
+                <span
+                  className={`block truncate pr-1 text-xs ${fileLabelWidthClass}`}
+                >
+                  {file.path}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
       </div>
     </div>
