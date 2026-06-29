@@ -1,4 +1,5 @@
 import "../src/styles.css"
+import { Toaster } from "react-hot-toast"
 import {
   WorkspaceCodeEditor,
   type EditorFile,
@@ -99,6 +100,24 @@ export const MPL3115A2R1 = (props: ChipProps<typeof pinLabels>) => {
 }
 `,
   },
+  {
+    path: "lib/constants.ts",
+    content: `export const BOARD_WIDTH_MM = 15.24
+export const BOARD_HEIGHT_MM = 17.78
+`,
+  },
+  {
+    path: "lib/footprints/cap0402.ts",
+    content: `export const cap0402 = "cap0402"
+`,
+  },
+  {
+    path: "README.md",
+    content: `# MPL3115A2 breakout
+
+A tiny tscircuit example board. Edit \`index.tsx\` to get started.
+`,
+  },
 ]
 
 export default function TscircuitWorkspaceFixture() {
@@ -110,6 +129,7 @@ export default function TscircuitWorkspaceFixture() {
   return (
     <div className="h-screen bg-white">
       <WorkspaceCodeEditor {...workspace} />
+      <Toaster position="bottom-right" />
     </div>
   )
 }

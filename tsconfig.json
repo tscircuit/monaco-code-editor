@@ -10,6 +10,12 @@
     "ignoreDeprecations": "6.0",
     "types": ["bun-types"],
 
+    // Path aliases
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
     // Bundler mode
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
