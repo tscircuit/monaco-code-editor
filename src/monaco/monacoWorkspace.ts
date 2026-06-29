@@ -34,7 +34,7 @@ function defaultInferLanguage(path: string) {
 }
 
 function defaultToUri(path: string) {
-  return monaco.Uri.parse(`file://${normalizePath(path)}`)
+  return monaco.Uri.file(normalizePath(path))
 }
 
 export class MonacoWorkspaceModelManager {

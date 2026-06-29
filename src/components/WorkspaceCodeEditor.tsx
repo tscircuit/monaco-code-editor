@@ -1,5 +1,5 @@
 import Editor, { type OnChange, type OnMount } from "@monaco-editor/react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import * as monaco from "monaco-editor"
 import {
   defaultCodeEditorOptions,
@@ -101,7 +101,7 @@ export function WorkspaceCodeEditor({
   readOnly = false,
   isSaving = false,
   isStreaming = false,
-  isPriorityFileFetched = false,
+  isPriorityFileFetched,
   showSidebar = true,
   className,
   height = "100%",
@@ -109,6 +109,7 @@ export function WorkspaceCodeEditor({
 }: WorkspaceCodeEditorProps) {
   const isReady = useMonacoReady()
   const [editorReady, setEditorReady] = useState(false)
+  const [workspaceModelsReady, setWorkspaceModelsReady] = useState(false)
 
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
   const managerRef = useRef<MonacoWorkspaceModelManager | null>(null)
@@ -136,6 +137,14 @@ export function WorkspaceCodeEditor({
   const currentContentRef = useRef(currentContent)
   currentContentRef.current = currentContent
   const currentFileIsBinary = currentFileData?.isBinary === true
+  const isPriorityFilePending = isPriorityFileFetched === false
+  const workspaceFiles = useMemo(
+    () =>
+      files
+        .filter((file) => !file.isBinary)
+        .map((file) => ({ path: file.path, content: file.content })),
+    [files],
+  )
 
   const editorOptions =
     useMemo<monaco.editor.IStandaloneEditorConstructionOptions>(
@@ -155,14 +164,30 @@ export function WorkspaceCodeEditor({
 
   // Keep a live model for every (text) file so the TypeScript language service
   // can resolve cross-file imports and surface diagnostics project-wide.
-  useEffect(() => {
-    if (!isReady) return
+  useLayoutEffect(() => {
+    if (!isReady) {
+      setWorkspaceModelsReady(false)
+      return
+    }
+
     managerRef.current?.syncFiles(
-      files
-        .filter((file) => !file.isBinary)
-        .map((file) => ({ path: file.path, content: file.content })),
+      workspaceFiles,
     )
-  }, [isReady, files])
+    setWorkspaceModelsReady(true)
+  }, [isReady, workspaceFiles])
+
+  // Monaco's TS worker can occasionally compute diagnostics before it has seen
+  // the full workspace graph on the first load. Re-sync once after the editor
+  // mounts to force a fresh pass without requiring a manual page refresh.
+  useEffect(() => {
+    if (!isReady || !editorReady) return
+
+    const timeoutId = window.setTimeout(() => {
+      managerRef.current?.syncFiles(workspaceFiles)
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [isReady, editorReady, workspaceFiles])
 
   // Route cross-file "go to definition" through onFileSelect so navigation into
   // another workspace file switches the active file instead of failing silently.
@@ -348,7 +373,7 @@ export function WorkspaceCodeEditor({
           </pre>
         ) : currentFileIsBinary ? (
           <BinaryFileNotice downloadUrl={currentFileData?.downloadUrl} />
-        ) : !isReady || isPriorityFileFetched ? (
+        ) : !isReady || !workspaceModelsReady || isPriorityFilePending ? (
           <CenteredMessage>Loading editor…</CenteredMessage>
         ) : currentFile ? (
           <Editor
