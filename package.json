@@ -11,7 +11,7 @@
 	},
 	"scripts": {
 		"build": "bun run build:lib",
-		"build:lib": "tsc --noEmit && tsup src/index.ts --format esm --dts --external react,react-dom,@monaco-editor/react,monaco-editor,@typescript/ata,typescript,@tscircuit/runframe",
+		"build:lib": "tsc --noEmit && tsup src/index.ts --format esm --dts --external react,react-dom,@monaco-editor/react,monaco-editor,@typescript/ata,typescript",
 		"dev": "cosmos",
 		"cosmos": "cosmos",
 		"cosmos:export": "cosmos-export",

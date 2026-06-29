@@ -4,16 +4,6 @@ import type { EditorFile } from "../src"
 // Cosmos runframe example runs the selected runnable file instead of always
 // falling back to index.tsx. This stays outside src/ because it is not part of
 // the public editor/workspace library API.
-export const hasDefaultEntrypointExport = (code: string) => {
-  return (
-    /export default\s+\w+/.test(code) ||
-    /export default\s+function\s*(\w*)\s*\(/.test(code) ||
-    /export default\s*\(\s*\)\s*=>/.test(code) ||
-    /export default\s*\(.*?\)\s*=>/.test(code) ||
-    /export\s*\{\s*\w+\s+as\s+default\s*\}/.test(code)
-  )
-}
-
 const findConfiguredEntrypoint = (
   files: EditorFile[],
   field: "mainEntrypoint" | "previewComponentPath",
@@ -44,11 +34,7 @@ export const resolveTscircuitEntrypoint = (
     ? files.find((file) => file.path === currentFile)
     : null
 
-  if (
-    currentFileData &&
-    /\.(ts|tsx)$/.test(currentFileData.path) &&
-    hasDefaultEntrypointExport(currentFileData.content)
-  ) {
+  if (currentFileData && /\.(ts|tsx)$/.test(currentFileData.path)) {
     return currentFileData.path
   }
 
