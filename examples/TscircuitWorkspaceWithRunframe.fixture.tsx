@@ -137,6 +137,7 @@ export default function TscircuitWorkspaceWithRunframeFixture() {
         <div className="min-h-0 flex flex-1 flex-col">
           <div className="h-full flex-1">
             <RunFrame
+              key={mainComponentPath}
               fsMap={fsMap}
               mainComponentPath={mainComponentPath}
               showFileMenu={false}
