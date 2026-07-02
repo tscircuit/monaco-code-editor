@@ -3,7 +3,7 @@ import {
   DEFAULT_TSCI_REGISTRY_API_URL,
   createTsciPackageFetcher,
   rewriteTsciJsdelivrUrl,
-} from "./tsciPackageSupport"
+} from "../src/monaco/tsciPackageSupport"
 
 const registry = DEFAULT_TSCI_REGISTRY_API_URL
 
