@@ -30,7 +30,20 @@ export {
   createMonacoWorkspaceModelManager,
   MonacoWorkspaceModelManager,
 } from "./monaco/monacoWorkspace"
-export { acquireTscircuitTypes } from "./monaco/typeAcquisition"
+export {
+  acquireTscircuitTypes,
+  configureTscircuitTypeAcquisition,
+} from "./monaco/typeAcquisition"
+export type { TscircuitTypeAcquisitionOptions } from "./monaco/typeAcquisition"
+export {
+  createTsciPackageFetcher,
+  rewriteTsciJsdelivrUrl,
+  DEFAULT_TSCI_REGISTRY_API_URL,
+} from "./monaco/tsciPackageSupport"
+export type {
+  PackageFetcher,
+  TsciPackageFetcherOptions,
+} from "./monaco/tsciPackageSupport"
 
 export type {
   MonacoWorkspaceModelManagerOptions,

@@ -34,5 +34,5 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "include": ["src", "examples", "vite.config.ts"]
+  "include": ["src", "examples", "tests", "vite.config.ts"]
 }
