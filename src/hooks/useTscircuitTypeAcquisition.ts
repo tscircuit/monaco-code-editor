@@ -4,11 +4,17 @@ import { acquireTscircuitTypes } from "../monaco/typeAcquisition"
 /** Acquires initial types immediately, then debounces background updates. */
 export function useTscircuitTypeAcquisition(
   source: string | null | undefined,
-  options: { enabled?: boolean; delayMs?: number } = {},
+  options: {
+    enabled?: boolean
+    delayMs?: number
+    readinessKey?: string
+  } = {},
 ): boolean {
-  const { enabled = true, delayMs = 250 } = options
+  const { enabled = true, delayMs = 250, readinessKey = "initial" } = options
   const hasCompletedInitialAcquisition = useRef(false)
-  const [isReady, setIsReady] = useState(false)
+  const [completedReadinessKey, setCompletedReadinessKey] = useState<
+    string | null
+  >(null)
 
   useEffect(() => {
     if (!enabled || source == null) return
@@ -21,7 +27,7 @@ export function useTscircuitTypeAcquisition(
         .finally(() => {
           if (!isActive) return
           hasCompletedInitialAcquisition.current = true
-          setIsReady(true)
+          setCompletedReadinessKey(readinessKey)
         })
     }, delay)
 
@@ -29,7 +35,7 @@ export function useTscircuitTypeAcquisition(
       isActive = false
       window.clearTimeout(timer)
     }
-  }, [enabled, source, delayMs])
+  }, [enabled, source, delayMs, readinessKey])
 
-  return isReady
+  return enabled && completedReadinessKey === readinessKey
 }

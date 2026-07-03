@@ -12,6 +12,11 @@ import {
   createMonacoWorkspaceModelManager,
   type MonacoWorkspaceModelManager,
 } from "../monaco/monacoWorkspace"
+import {
+  getWorkspaceFileSetKey,
+  getWorkspaceTypeAcquisitionSource,
+  isWorkspaceLoadPending,
+} from "../monaco/workspaceReadiness"
 import { isHiddenFile } from "../utils/isHiddenFile"
 import { FileSidebar } from "./FileSidebar"
 import {
@@ -120,8 +125,9 @@ export function WorkspaceCodeEditor({
 }: WorkspaceCodeEditorProps) {
   const isReady = useMonacoReady()
   const [editorReady, setEditorReady] = useState(false)
-  const [workspaceModelsReady, setWorkspaceModelsReady] = useState(false)
-  const [validatedWorkspaceKey, setValidatedWorkspaceKey] = useState("")
+  const [syncedWorkspaceKey, setSyncedWorkspaceKey] = useState<string | null>(
+    null,
+  )
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
@@ -151,12 +157,12 @@ export function WorkspaceCodeEditor({
   currentContentRef.current = currentContent
   const currentFileIsBinary = currentFileData?.isBinary === true
   const isPriorityFilePending = isPriorityFileFetched === false
-  const isWorkspacePending =
-    isFullyLoaded === false ||
-    pkgFilesLoaded === false ||
-    (totalFilesCount != null &&
-      loadedFilesCount != null &&
-      loadedFilesCount < totalFilesCount)
+  const isWorkspacePending = isWorkspaceLoadPending({
+    isFullyLoaded,
+    totalFilesCount,
+    loadedFilesCount,
+    pkgFilesLoaded,
+  })
   const workspaceFiles = useMemo(
     () =>
       files
@@ -164,15 +170,19 @@ export function WorkspaceCodeEditor({
         .map((file) => ({ path: file.path, content: file.content })),
     [files],
   )
-  const workspaceKey = `${currentFile ?? ""}\0${workspaceFiles
-    .map((file) => file.path)
-    .join("\0")}`
-  const workspaceFilesRef = useRef(workspaceFiles)
-  workspaceFilesRef.current = workspaceFiles
+  const workspaceKey = getWorkspaceFileSetKey(workspaceFiles)
+  const workspaceTypeSource = useMemo(
+    () => getWorkspaceTypeAcquisitionSource(workspaceFiles),
+    [workspaceFiles],
+  )
+  const workspaceModelsReady =
+    isReady && !isWorkspacePending && syncedWorkspaceKey === workspaceKey
 
-  // Acquire tscircuit/dependency types for the active file (debounced).
-  const areTypesReady = useTscircuitTypeAcquisition(currentContent, {
-    enabled: isReady && isCodeFile(currentFile),
+  // Acquire dependencies only after Monaco can see the complete local module
+  // graph. Scanning every code file also covers imports outside the active file.
+  const areTypesReady = useTscircuitTypeAcquisition(workspaceTypeSource, {
+    enabled: workspaceModelsReady && isCodeFile(currentFile),
+    readinessKey: workspaceKey,
   })
 
   // Files offered in the top-bar dropdown: hide noise (lockfiles, dist, …) but
@@ -204,44 +214,14 @@ export function WorkspaceCodeEditor({
   // Keep a live model for every (text) file so the TypeScript language service
   // can resolve cross-file imports and surface diagnostics project-wide.
   useLayoutEffect(() => {
-    if (!isReady) {
-      setWorkspaceModelsReady(false)
+    if (!isReady || isWorkspacePending) {
+      setSyncedWorkspaceKey(null)
       return
     }
 
     managerRef.current?.syncFiles(workspaceFiles)
-    setWorkspaceModelsReady(true)
-  }, [isReady, workspaceFiles])
-
-  // A model may be validated before the rest of its relative imports arrive.
-  // Flush the active model once the complete workspace graph and dependency
-  // types are ready so Monaco re-runs diagnostics before showing the editor.
-  useEffect(() => {
-    if (
-      !isReady ||
-      !workspaceModelsReady ||
-      !areTypesReady ||
-      isWorkspacePending ||
-      !currentFile
-    ) {
-      return
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      managerRef.current?.syncFiles(workspaceFilesRef.current)
-      managerRef.current?.refreshModel(currentFile)
-      setValidatedWorkspaceKey(workspaceKey)
-    }, 0)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [
-    isReady,
-    workspaceModelsReady,
-    areTypesReady,
-    isWorkspacePending,
-    currentFile,
-    workspaceKey,
-  ])
+    setSyncedWorkspaceKey(workspaceKey)
+  }, [isReady, isWorkspacePending, workspaceFiles, workspaceKey])
 
   // Route cross-file "go to definition" through onFileSelect so navigation into
   // another workspace file switches the active file instead of failing silently.
@@ -331,7 +311,6 @@ export function WorkspaceCodeEditor({
     !isReady ||
     !workspaceModelsReady ||
     (isCodeFile(currentFile) && !areTypesReady) ||
-    (isCodeFile(currentFile) && validatedWorkspaceKey !== workspaceKey) ||
     isPriorityFilePending ||
     isWorkspacePending
   ) {
