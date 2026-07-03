@@ -31,6 +31,20 @@ export function getWorkspaceFileSetKey(
     .join("\0")
 }
 
+export function orderWorkspaceFilesForModelCreation(
+  files: readonly WorkspaceFile[],
+  currentFile: string | null,
+): WorkspaceFile[] {
+  if (!currentFile) return [...files]
+
+  // Monaco starts diagnostics as each model is created. Register dependencies
+  // before the active importer so its first diagnostic pass sees every sibling.
+  return [
+    ...files.filter((file) => file.path !== currentFile),
+    ...files.filter((file) => file.path === currentFile),
+  ]
+}
+
 export function getWorkspaceTypeAcquisitionSource(
   files: readonly WorkspaceFile[],
 ): string {

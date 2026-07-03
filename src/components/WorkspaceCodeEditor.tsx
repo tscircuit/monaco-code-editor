@@ -12,10 +12,12 @@ import {
   createMonacoWorkspaceModelManager,
   type MonacoWorkspaceModelManager,
 } from "../monaco/monacoWorkspace"
+import { prepareMonacoTypeScriptWorkspace } from "../monaco/monacoTypeScript"
 import {
   getWorkspaceFileSetKey,
   getWorkspaceTypeAcquisitionSource,
   isWorkspaceLoadPending,
+  orderWorkspaceFilesForModelCreation,
 } from "../monaco/workspaceReadiness"
 import { isHiddenFile } from "../utils/isHiddenFile"
 import { FileSidebar } from "./FileSidebar"
@@ -214,14 +216,48 @@ export function WorkspaceCodeEditor({
   // Keep a live model for every (text) file so the TypeScript language service
   // can resolve cross-file imports and surface diagnostics project-wide.
   useLayoutEffect(() => {
+    let isActive = true
+
     if (!isReady || isWorkspacePending) {
       setSyncedWorkspaceKey(null)
-      return
+      return () => {
+        isActive = false
+      }
     }
 
-    managerRef.current?.syncFiles(workspaceFiles)
-    setSyncedWorkspaceKey(workspaceKey)
-  }, [isReady, isWorkspacePending, workspaceFiles, workspaceKey])
+    const orderedFiles = orderWorkspaceFilesForModelCreation(
+      workspaceFiles,
+      currentFile,
+    )
+    managerRef.current?.syncFiles(orderedFiles)
+
+    if (syncedWorkspaceKey !== workspaceKey) {
+      setSyncedWorkspaceKey(null)
+      const codeModelUris = orderedFiles
+        .filter((file) => isCodeFile(file.path))
+        .map((file) => managerRef.current?.getUri(file.path))
+        .filter((uri): uri is monaco.Uri => uri != null)
+
+      void prepareMonacoTypeScriptWorkspace(codeModelUris)
+        .then(() => {
+          if (isActive) setSyncedWorkspaceKey(workspaceKey)
+        })
+        .catch((error) => {
+          console.warn("Failed to prepare TypeScript workspace", error)
+        })
+    }
+
+    return () => {
+      isActive = false
+    }
+  }, [
+    isReady,
+    isWorkspacePending,
+    workspaceFiles,
+    workspaceKey,
+    currentFile,
+    syncedWorkspaceKey,
+  ])
 
   // Route cross-file "go to definition" through onFileSelect so navigation into
   // another workspace file switches the active file instead of failing silently.

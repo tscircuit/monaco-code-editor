@@ -22,6 +22,9 @@ type TypeScriptApi = {
     ES2022: number
   }
   typescriptDefaults: TypeScriptLanguageServiceDefaults
+  getTypeScriptWorker(): Promise<
+    (...resources: monaco.Uri[]) => Promise<unknown>
+  >
 }
 
 let isConfigured = false
@@ -62,4 +65,12 @@ export function configureMonacoTypeScript() {
   typescript.typescriptDefaults.setEagerModelSync?.(true)
 
   isConfigured = true
+}
+
+/** Wait until Monaco's TypeScript worker has synchronized the workspace graph. */
+export async function prepareMonacoTypeScriptWorkspace(
+  resources: readonly monaco.Uri[],
+): Promise<void> {
+  const getWorker = await getTypeScriptApi().getTypeScriptWorker()
+  await getWorker(...resources)
 }

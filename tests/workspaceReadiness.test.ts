@@ -3,6 +3,7 @@ import {
   getWorkspaceFileSetKey,
   getWorkspaceTypeAcquisitionSource,
   isWorkspaceLoadPending,
+  orderWorkspaceFilesForModelCreation,
 } from "../src/monaco/workspaceReadiness"
 
 describe("isWorkspaceLoadPending", () => {
@@ -50,5 +51,22 @@ describe("workspace preparation", () => {
     expect(source).toContain('import "./MPL3115A2R1"')
     expect(source).toContain('from "@tscircuit/props"')
     expect(source).not.toContain("manual-edits.json")
+  })
+
+  test("creates the active importer after its sibling models", () => {
+    const orderedFiles = orderWorkspaceFilesForModelCreation(
+      [
+        { path: "index.tsx", content: 'import "./MPL3115A2R1"' },
+        { path: "MPL3115A2R1.tsx", content: "export const sensor = {}" },
+        { path: "manual-edits.json", content: "{}" },
+      ],
+      "index.tsx",
+    )
+
+    expect(orderedFiles.map((file) => file.path)).toEqual([
+      "MPL3115A2R1.tsx",
+      "manual-edits.json",
+      "index.tsx",
+    ])
   })
 })
