@@ -150,14 +150,14 @@ export function WorkspaceCodeEditor({
   const onFileSelectRef = useRef(onFileSelect)
   onFileSelectRef.current = onFileSelect
 
-  const currentFileData = useMemo(
+  const currentEditorFile = useMemo(
     () => files.find((file) => file.path === currentFile),
     [files, currentFile],
   )
-  const currentContent = currentFileData?.content ?? ""
+  const currentContent = currentEditorFile?.content ?? ""
   const currentContentRef = useRef(currentContent)
   currentContentRef.current = currentContent
-  const currentFileIsBinary = currentFileData?.isBinary === true
+  const currentFileIsBinary = currentEditorFile?.isBinary === true
   const isPriorityFilePending = isPriorityFileFetched === false
   const isWorkspacePending = isWorkspaceLoadPending({
     isFullyLoaded,
@@ -323,13 +323,13 @@ export function WorkspaceCodeEditor({
     setEditorReady(true)
   }
 
-  const handleChange: OnChange = (value) => {
-    const nextValue = value ?? ""
+  const handleChange: OnChange = (updatedContent) => {
+    const nextContent = updatedContent ?? ""
     if (!currentFile) return
     // Ignore echoes from programmatic model updates (external sync/streaming).
-    if (nextValue === currentContentRef.current) return
-    onCodeChange(nextValue, currentFile)
-    onFileContentChanged?.(currentFile, nextValue)
+    if (nextContent === currentContentRef.current) return
+    onCodeChange(nextContent, currentFile)
+    onFileContentChanged?.(currentFile, nextContent)
   }
 
   let editorBody: React.ReactNode
@@ -341,7 +341,9 @@ export function WorkspaceCodeEditor({
       </pre>
     )
   } else if (currentFileIsBinary) {
-    editorBody = <BinaryFileNotice downloadUrl={currentFileData?.downloadUrl} />
+    editorBody = (
+      <BinaryFileNotice downloadUrl={currentEditorFile?.downloadUrl} />
+    )
   } else if (
     !isWorkspacePrepared ||
     (isCodeFile(currentFile) && !areTypesReady) ||
@@ -433,7 +435,7 @@ function EditorTopBar({
       <div>
         <Select
           value={currentFile ?? ""}
-          onValueChange={(value) => onFileSelect(value)}
+          onValueChange={(selectedFile) => onFileSelect(selectedFile)}
         >
           <SelectTrigger
             className={`h-7 w-32 bg-white px-3 select-none transition-[margin] duration-300 ease-in-out sm:w-48 ${

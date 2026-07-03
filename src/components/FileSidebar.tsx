@@ -79,7 +79,7 @@ export function FileSidebar({
     [files],
   )
 
-  const treeData = transformFilesToTreeData({
+  const fileTree = transformFilesToTreeData({
     files: filesRecord,
     currentFile,
     renamingFile,
@@ -245,10 +245,13 @@ export function FileSidebar({
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <TreeView
-          data={treeData}
-          setSelectedItemId={(value) => {
-            if (value && filesRecord[value] !== undefined) {
-              onFileSelect(value)
+          data={fileTree}
+          setSelectedItemId={(selectedFilePath) => {
+            if (
+              selectedFilePath &&
+              filesRecord[selectedFilePath] !== undefined
+            ) {
+              onFileSelect(selectedFilePath)
             }
           }}
           selectedItemId={selectedItemId}

@@ -48,13 +48,13 @@ export function rewriteTsciJsdelivrUrl(
   // Registry packages are addressed as `owner/name`; the npm scope encodes
   // that as `owner.name`, so convert the first dot back to a slash while
   // preserving any `@version` suffix and trailing file path.
-  const parts = packagePath.split("/")
-  parts[0] = (parts[0] ?? "").replace(/\./, "/")
-  const transformedPackagePath = parts.join("/")
+  const packagePathSegments = packagePath.split("/")
+  packagePathSegments[0] = (packagePathSegments[0] ?? "").replace(/\./, "/")
+  const registryPackagePath = packagePathSegments.join("/")
 
   const isResolve = url.includes("/resolve/")
-  const baseUrl = registryApiUrl.replace(/\/+$/, "")
-  return `${baseUrl}/snippets/download?jsdelivr_resolve=${isResolve}&jsdelivr_path=${encodeURIComponent(transformedPackagePath)}`
+  const registryBaseUrl = registryApiUrl.replace(/\/+$/, "")
+  return `${registryBaseUrl}/snippets/download?jsdelivr_resolve=${isResolve}&jsdelivr_path=${encodeURIComponent(registryPackagePath)}`
 }
 
 /** Minimal fetch signature (avoids Bun/DOM `typeof fetch` static-prop drift). */
@@ -109,9 +109,9 @@ export function createTsciPackageFetcher(
     const response = await fetchFn(fetchUrl, init)
     if (!response.ok) return response
 
-    const text = await response.text()
-    cache.set(fetchUrl, text)
-    return new Response(text, {
+    const responseBody = await response.text()
+    cache.set(fetchUrl, responseBody)
+    return new Response(responseBody, {
       status: response.status,
       statusText: response.statusText,
       headers: response.headers,
