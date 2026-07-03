@@ -121,6 +121,7 @@ export function WorkspaceCodeEditor({
   const isReady = useMonacoReady()
   const [editorReady, setEditorReady] = useState(false)
   const [workspaceModelsReady, setWorkspaceModelsReady] = useState(false)
+  const [validatedWorkspaceKey, setValidatedWorkspaceKey] = useState("")
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
@@ -163,6 +164,16 @@ export function WorkspaceCodeEditor({
         .map((file) => ({ path: file.path, content: file.content })),
     [files],
   )
+  const workspaceKey = `${currentFile ?? ""}\0${workspaceFiles
+    .map((file) => file.path)
+    .join("\0")}`
+  const workspaceFilesRef = useRef(workspaceFiles)
+  workspaceFilesRef.current = workspaceFiles
+
+  // Acquire tscircuit/dependency types for the active file (debounced).
+  const areTypesReady = useTscircuitTypeAcquisition(currentContent, {
+    enabled: isReady && isCodeFile(currentFile),
+  })
 
   // Files offered in the top-bar dropdown: hide noise (lockfiles, dist, …) but
   // always keep the active file selectable even when it is itself hidden.
@@ -202,18 +213,35 @@ export function WorkspaceCodeEditor({
     setWorkspaceModelsReady(true)
   }, [isReady, workspaceFiles])
 
-  // Monaco's TS worker can occasionally compute diagnostics before it has seen
-  // the full workspace graph on the first load. Re-sync once after the editor
-  // mounts to force a fresh pass without requiring a manual page refresh.
+  // A model may be validated before the rest of its relative imports arrive.
+  // Flush the active model once the complete workspace graph and dependency
+  // types are ready so Monaco re-runs diagnostics before showing the editor.
   useEffect(() => {
-    if (!isReady || !editorReady) return
+    if (
+      !isReady ||
+      !workspaceModelsReady ||
+      !areTypesReady ||
+      isWorkspacePending ||
+      !currentFile
+    ) {
+      return
+    }
 
     const timeoutId = window.setTimeout(() => {
-      managerRef.current?.syncFiles(workspaceFiles)
+      managerRef.current?.syncFiles(workspaceFilesRef.current)
+      managerRef.current?.refreshModel(currentFile)
+      setValidatedWorkspaceKey(workspaceKey)
     }, 0)
 
     return () => window.clearTimeout(timeoutId)
-  }, [isReady, editorReady, workspaceFiles])
+  }, [
+    isReady,
+    workspaceModelsReady,
+    areTypesReady,
+    isWorkspacePending,
+    currentFile,
+    workspaceKey,
+  ])
 
   // Route cross-file "go to definition" through onFileSelect so navigation into
   // another workspace file switches the active file instead of failing silently.
@@ -268,11 +296,6 @@ export function WorkspaceCodeEditor({
     }
   }, [currentFile, isReady, editorReady, files])
 
-  // Acquire tscircuit/dependency types for the active file (debounced).
-  const areTypesReady = useTscircuitTypeAcquisition(currentContent, {
-    enabled: isReady && isCodeFile(currentFile),
-  })
-
   const handleMount: OnMount = (editorInstance) => {
     editorRef.current = editorInstance
     if (currentFile) {
@@ -308,6 +331,7 @@ export function WorkspaceCodeEditor({
     !isReady ||
     !workspaceModelsReady ||
     (isCodeFile(currentFile) && !areTypesReady) ||
+    (isCodeFile(currentFile) && validatedWorkspaceKey !== workspaceKey) ||
     isPriorityFilePending ||
     isWorkspacePending
   ) {

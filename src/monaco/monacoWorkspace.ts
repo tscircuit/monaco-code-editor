@@ -101,6 +101,15 @@ export class MonacoWorkspaceModelManager {
     model.setValue(nextContent)
   }
 
+  refreshModel(path: string) {
+    const model = this.getModel(path)
+    if (!model) return
+
+    // A flush event makes Monaco's TypeScript diagnostics adapter revalidate
+    // imports after new sibling models have been added to the workspace.
+    model.setValue(model.getValue())
+  }
+
   renameModel(oldPath: string, newPath: string) {
     const model = this.getModel(oldPath)
     if (!model) return null
