@@ -109,6 +109,10 @@ export function WorkspaceCodeEditor({
   isSaving = false,
   isStreaming = false,
   isPriorityFileFetched,
+  isFullyLoaded,
+  totalFilesCount,
+  loadedFilesCount,
+  pkgFilesLoaded,
   showSidebar = true,
   className,
   height = "100%",
@@ -146,6 +150,12 @@ export function WorkspaceCodeEditor({
   currentContentRef.current = currentContent
   const currentFileIsBinary = currentFileData?.isBinary === true
   const isPriorityFilePending = isPriorityFileFetched === false
+  const isWorkspacePending =
+    isFullyLoaded === false ||
+    pkgFilesLoaded === false ||
+    (totalFilesCount != null &&
+      loadedFilesCount != null &&
+      loadedFilesCount < totalFilesCount)
   const workspaceFiles = useMemo(
     () =>
       files
@@ -259,7 +269,7 @@ export function WorkspaceCodeEditor({
   }, [currentFile, isReady, editorReady, files])
 
   // Acquire tscircuit/dependency types for the active file (debounced).
-  useTscircuitTypeAcquisition(currentContent, {
+  const areTypesReady = useTscircuitTypeAcquisition(currentContent, {
     enabled: isReady && isCodeFile(currentFile),
   })
 
@@ -294,7 +304,13 @@ export function WorkspaceCodeEditor({
     )
   } else if (currentFileIsBinary) {
     editorBody = <BinaryFileNotice downloadUrl={currentFileData?.downloadUrl} />
-  } else if (!isReady || !workspaceModelsReady || isPriorityFilePending) {
+  } else if (
+    !isReady ||
+    !workspaceModelsReady ||
+    (isCodeFile(currentFile) && !areTypesReady) ||
+    isPriorityFilePending ||
+    isWorkspacePending
+  ) {
     editorBody = <CenteredMessage>Loading editor…</CenteredMessage>
   } else if (currentFile) {
     editorBody = (

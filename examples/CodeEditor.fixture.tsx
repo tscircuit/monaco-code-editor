@@ -9,23 +9,25 @@ import { PushButton } from "@tsci/seveibar.push-button"
 import { SmdUsbC } from "@tsci/seveibar.smd-usb-c"
 
 export default () => (
-  <board width="30mm" height="30mm">
-    <SmdUsbC name="USB1" />
-    <PushButton name="SW1" />
-    <RedLed name="LED1" />
-    <resistor
-      resistance="1k"
-      footprint="0402"
-      name="R1"
-    />
-    <capacitor
-      capacitance="1000pF"
-      footprint="0402"
-      name="C1"
-      connections={{ pin1: "R1.pin1" }}
-    />
+  <board width="12mm" height="30mm" schAutoLayoutEnabled>
+    <SmdUsbC name="USBC" pcbY={-10} />
+    <RedLed name="LED" pcbY={12} />
+    <PushButton name="SW1" pcbY={0} />
+    <resistor name="R1" footprint="0603" resistance="1k" pcbY={7} />
+
+    <trace from="USBC.GND1" to="net.GND" />
+    <trace from="USBC.GND2" to="net.GND" />
+    <trace from="USBC.VBUS1" to="net.VBUS" />
+    <trace from="USBC.VBUS2" to="net.VBUS" />
+
+    <trace from="LED.neg" to="net.GND" />
+    <trace from=".R1 > .neg" to="LED.pos" />
+
+    <trace from="SW1.pin2" to="R1.pos" />
+    <trace from="SW1.pin3" to="net.VBUS" />
   </board>
-)`}
+)
+`}
       language="typescript"
       path="fixture.tsx"
       options={{

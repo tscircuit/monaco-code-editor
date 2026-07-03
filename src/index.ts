@@ -40,6 +40,13 @@ export {
   rewriteTsciJsdelivrUrl,
   DEFAULT_TSCI_REGISTRY_API_URL,
 } from "./monaco/tsciPackageSupport"
+export {
+  computeTsciPackageLinks,
+  getTsciPackagePageUrl,
+  DEFAULT_TSCI_PACKAGE_BASE_URL,
+} from "./monaco/tsciPackageLinks"
+export type { TsciPackageLink } from "./monaco/tsciPackageLinks"
+export { registerTsciPackageLinkProvider } from "./monaco/monacoSetup"
 export type {
   PackageFetcher,
   TsciPackageFetcherOptions,

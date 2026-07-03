@@ -40,7 +40,7 @@ export function CodeEditor({
 }: CodeEditorProps) {
   const isMonacoReady = useMonacoReady()
 
-  useTscircuitTypeAcquisition(value ?? defaultValue, {
+  const areTypesReady = useTscircuitTypeAcquisition(value ?? defaultValue, {
     enabled: isMonacoReady,
   })
 
@@ -48,7 +48,7 @@ export function CodeEditor({
     onChange?.(nextValue ?? "", event)
   }
 
-  if (!isMonacoReady) {
+  if (!isMonacoReady || !areTypesReady) {
     return <>{loading}</>
   }
 
