@@ -1,11 +1,17 @@
-# Created using @tscircuit/plop (npm install -g @tscircuit/plop)
-name: Publish to npm
+# Created using @tscircuit/plop (bun install --global @tscircuit/plop)
+name: Publish to GitHub Packages
+
 on:
   push:
     branches:
       - main
-      - '!version-bumps/**'
+      - "!version-bumps/**"
   workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
 
 env:
   UPSTREAM_REPOS: "" # comma-separated list, e.g. "eval,tscircuit,docs"
@@ -16,28 +22,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          registry-url: https://registry.npmjs.org/
-      - run: npm install -g pver
+          registry-url: https://npm.pkg.github.com
+          scope: "@tscircuit"
+
+      - run: bun install --global pver
       - run: bun install --frozen-lockfile
       - run: bun run build
-      - run: pver release --no-push-main
+
+      - name: Publish package
+        run: pver release --no-push-main
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.TSCIRCUIT_BOT_GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get package version
         id: package-version
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION=$(bun -p "require('./package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
 
       - name: Create Pull Request
         id: create-pr
@@ -74,18 +87,18 @@ jobs:
                 -d "{\"ref\":\"main\",\"inputs\":{\"package_names\":\"${{ env.UPSTREAM_PACKAGES_TO_UPDATE }}\"}}"
             fi
           done
+
       - name: Notify release-tracker of version update
-        # Continue-on-error just in case the tracker is down
         continue-on-error: true
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION=$(bun -p "require('./package.json').version")
           PACKAGE_JSON=$(cat package.json)
           curl -X POST https://release-tracker.tscircuit.com/release_events/create \
             -H "Content-Type: application/json" \
             -d "{
               \"event\": {
                 \"event_type\": \"versions_updated\",
-                \"repo\": \"tscircuit/monaco-code-editor\",
+                \"repo\": \"${{ github.repository }}\",
                 \"version\": \"$VERSION\",
                 \"package_json\": $PACKAGE_JSON
               }

@@ -1,6 +1,11 @@
 {
-	"name": "monaco-code-editor",
+	"name": "@tscircuit/monaco-code-editor",
 	"version": "0.0.1",
+	"repository": "https://github.com/tscircuit/monaco-code-editor",
+	"publishConfig": {
+		"registry": "https://npm.pkg.github.com"
+	},
+	"files": ["dist"],
 	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"type": "module",

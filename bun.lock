@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "monaco-code-editor",
+      "name": "@tscircuit/monaco-code-editor",
       "dependencies": {
         "@fontsource-variable/geist": "^5.2.9",
         "@monaco-editor/react": "^4.7.0",
