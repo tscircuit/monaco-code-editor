@@ -7,16 +7,16 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import type { TreeDataItem } from "@/components/ui/tree-view"
+} from "../components/ui/dropdown-menu"
+import type { TreeDataItem } from "../components/ui/tree-view"
 import type {
   DeleteFileProps,
   DeleteFileResult,
   RenameFileProps,
   RenameFileResult,
-} from "@/components/WorkspaceCodeEditor"
-import { getFileIconClassName, getFileIconComponent } from "@/utils/getFileIcon"
-import { isHiddenFile } from "@/utils/isHiddenFile"
+} from "../components/WorkspaceCodeEditor"
+import { getFileIconClassName, getFileIconComponent } from "./getFileIcon"
+import { isHiddenFile } from "./isHiddenFile"
 
 type FileName = string
 type TreeNode = Omit<TreeDataItem, "children"> & {
