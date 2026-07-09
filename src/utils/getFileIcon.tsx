@@ -27,12 +27,12 @@ export const getFileIconComponent = (filename: string): LucideIcon => {
   return FILE_ICON_BY_EXTENSION[extension] ?? File
 }
 
-export const getFileIconClassName = (
-  filename: string,
-  className?: string,
-) => {
+export const getFileIconClassName = (filename: string, className?: string) => {
   const extension = getFileExtension(filename)
-  return cn(FILE_ICON_COLOR_BY_EXTENSION[extension] ?? "text-slate-500", className)
+  return cn(
+    FILE_ICON_COLOR_BY_EXTENSION[extension] ?? "text-slate-500",
+    className,
+  )
 }
 
 export const getFileIcon = (filename: string, className?: string) => {
