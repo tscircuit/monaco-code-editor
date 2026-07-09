@@ -6,15 +6,15 @@ import { cn } from "../../lib/utils"
 import { Input } from "./input"
 
 const treeVariants = cva(
-  "group hover:before:opacity-100 before:absolute before:rounded-lg before:left-0 before:w-full before:opacity-0 before:bg-slate-100/70 before:h-[2rem] before:-z-10 dark:before:bg-slate-800/70",
+  "group rounded-md hover:bg-slate-200/70 transition-colors duration-100 dark:hover:bg-slate-700/50",
 )
 
 const selectedTreeVariants = cva(
-  "before:opacity-100 before:bg-slate-100/70 text-slate-900 dark:before:bg-slate-800/70 dark:text-slate-50",
+  "bg-slate-200 text-slate-900 font-medium dark:bg-slate-700 dark:text-slate-50",
 )
 
 const dragOverVariants = cva(
-  "before:opacity-100 before:bg-slate-900/20 text-slate-50 dark:before:bg-slate-50/20 dark:text-slate-900",
+  "bg-slate-300 text-slate-900 dark:bg-slate-600 dark:text-slate-50",
 )
 
 interface TreeDataItem {
@@ -455,7 +455,7 @@ const TreeLeaf = React.forwardRef<
       <div
         ref={ref}
         className={cn(
-          "ml-[2px] flex cursor-pointer items-center py-2 pr-8 text-left before:right-1",
+          "ml-[2px] flex cursor-pointer items-center py-2 pl-2 pr-8 text-left",
           treeVariants(),
           className,
           selectedItemId === item.id && selectedTreeVariants(),
@@ -543,7 +543,7 @@ const AccordionTrigger = React.forwardRef<
     <AccordionPrimitive.Trigger
       ref={ref}
       className={cn(
-        "flex w-full flex-1 items-center py-2 pr-8 text-left transition-all first:[&[data-state=open]>svg]:rotate-90",
+        "flex w-full flex-1 items-center py-2 pl-2 pr-8 text-left transition-all first:[&[data-state=open]>svg]:rotate-90",
         className,
       )}
       {...props}
