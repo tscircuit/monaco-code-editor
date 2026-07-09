@@ -1,4 +1,4 @@
-import { File, Folder, MoreVertical, Pencil, Trash2 } from "lucide-react"
+import { Folder, MoreVertical, Pencil, Trash2 } from "lucide-react"
 import toast from "react-hot-toast"
 import type * as React from "react"
 import {
@@ -15,6 +15,7 @@ import type {
   RenameFileProps,
   RenameFileResult,
 } from "@/components/WorkspaceCodeEditor"
+import { getFileIconClassName, getFileIconComponent } from "@/utils/getFileIcon"
 import { isHiddenFile } from "@/utils/isHiddenFile"
 
 type FileName = string
@@ -112,7 +113,8 @@ export const transformFilesToTreeData = ({
           onCancelRename: () => {
             setRenamingFile(null)
           },
-          icon: isLeafNode ? File : Folder,
+          icon: isLeafNode ? getFileIconComponent(segment) : Folder,
+          iconClassName: isLeafNode ? getFileIconClassName(segment) : undefined,
           onClick: isLeafNode
             ? () => {
                 onFileSelect(absolutePath)

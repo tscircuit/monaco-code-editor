@@ -21,6 +21,7 @@ interface TreeDataItem {
   id: string
   name: React.ReactNode
   icon?: any
+  iconClassName?: string
   selectedIcon?: any
   openIcon?: any
   children?: TreeDataItem[]
@@ -590,7 +591,11 @@ const TreeIcon = ({
   } else if (item.icon) {
     Icon = item.icon
   }
-  return Icon ? <Icon className="h-4 w-4 shrink-0 mr-2" /> : <></>
+  return Icon ? (
+    <Icon className={cn("h-4 w-4 shrink-0 mr-2", item.iconClassName)} />
+  ) : (
+    <></>
+  )
 }
 
 const TreeActions = ({
