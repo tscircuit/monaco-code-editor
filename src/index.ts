@@ -56,3 +56,5 @@ export type {
   MonacoWorkspaceModelManagerOptions,
   WorkspaceFile,
 } from "./monaco/monacoWorkspace"
+
+import "./styles.css"
