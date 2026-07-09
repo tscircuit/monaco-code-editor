@@ -1,5 +1,5 @@
 import { BookOpen, Braces, Code2, File, type LucideIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn } from "../lib/utils"
 
 const FILE_ICON_BY_EXTENSION: Record<string, LucideIcon> = {
   ts: Code2,

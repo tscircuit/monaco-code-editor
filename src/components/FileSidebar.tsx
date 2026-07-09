@@ -1,7 +1,7 @@
 import { Loader2, PanelRightClose, PanelRightOpen, Plus } from "lucide-react"
 import { useMemo, useState } from "react"
-import { Input } from "@/components/ui/input"
-import { TreeView } from "@/components/ui/tree-view"
+import { Input } from "./ui/input"
+import { TreeView } from "./ui/tree-view"
 import type {
   CreateFileProps,
   CreateFileResult,
@@ -10,14 +10,14 @@ import type {
   EditorFile,
   RenameFileProps,
   RenameFileResult,
-} from "@/components/WorkspaceCodeEditor"
-import { cn } from "@/lib/utils"
+} from "./WorkspaceCodeEditor"
+import { cn } from "../lib/utils"
 import {
   constructFilePath,
   getCurrentFolderPath,
   getFolderPlaceholder,
-} from "@/utils/fileSidebarPaths"
-import { transformFilesToTreeData } from "@/utils/transformFilesToTreeData"
+} from "../utils/fileSidebarPaths"
+import { transformFilesToTreeData } from "../utils/transformFilesToTreeData"
 
 export type FileSidebarProps = {
   files: EditorFile[]
