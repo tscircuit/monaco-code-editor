@@ -1,12 +1,12 @@
 import Editor, { type Monaco, type OnChange } from "@monaco-editor/react"
-import { type ReactNode } from "react"
 import type { editor } from "monaco-editor"
+import type { ReactNode } from "react"
+import { useMonacoReady } from "../hooks/useMonacoReady"
+import { useTscircuitTypeAcquisition } from "../hooks/useTscircuitTypeAcquisition"
 import {
   defaultCodeEditorOptions,
   defaultEditorTheme,
 } from "../monaco/editorDefaults"
-import { useMonacoReady } from "../hooks/useMonacoReady"
-import { useTscircuitTypeAcquisition } from "../hooks/useTscircuitTypeAcquisition"
 
 export type CodeEditorProps = {
   className?: string
@@ -40,7 +40,8 @@ export function CodeEditor({
 }: CodeEditorProps) {
   const isMonacoReady = useMonacoReady()
 
-  const areTypesReady = useTscircuitTypeAcquisition(value ?? defaultValue, {
+  // Types improve diagnostics but must never delay editing the current file.
+  useTscircuitTypeAcquisition(value ?? defaultValue, {
     enabled: isMonacoReady,
   })
 
@@ -48,7 +49,7 @@ export function CodeEditor({
     onChange?.(nextValue ?? "", event)
   }
 
-  if (!isMonacoReady || !areTypesReady) {
+  if (!isMonacoReady) {
     return <>{loading}</>
   }
 

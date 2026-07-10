@@ -2,8 +2,7 @@ import { useEffect, useState } from "react"
 import { ensureMonacoConfigured } from "../monaco/monacoSetup"
 
 /**
- * Runs the one-time Monaco configuration (loader + Shiki + TypeScript) and
- * reports when it has finished, so a component can gate rendering on it.
+ * Reports when Monaco and its Shiki tokenizer are ready to mount together.
  */
 export function useMonacoReady(): boolean {
   const [isReady, setIsReady] = useState(false)
@@ -11,9 +10,15 @@ export function useMonacoReady(): boolean {
   useEffect(() => {
     let isActive = true
 
-    void ensureMonacoConfigured().then(() => {
-      if (isActive) setIsReady(true)
-    })
+    void ensureMonacoConfigured()
+      .catch((error) => {
+        // Keep the editor usable with Monaco's fallback tokenizer if Shiki
+        // cannot be loaded.
+        console.warn("Failed to install Shiki tokenization", error)
+      })
+      .finally(() => {
+        if (isActive) setIsReady(true)
+      })
 
     return () => {
       isActive = false

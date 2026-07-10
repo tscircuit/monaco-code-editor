@@ -55,25 +55,34 @@ export class MonacoWorkspaceModelManager {
     return this.models.get(path) ?? monaco.editor.getModel(this.getUri(path))
   }
 
+  private getLanguage(file: WorkspaceFile) {
+    return file.language ?? this.inferLanguage(file.path)
+  }
+
+  private syncModel(file: WorkspaceFile, model: monaco.editor.ITextModel) {
+    this.models.set(file.path, model)
+
+    if (model.getValue() !== file.content) {
+      model.setValue(file.content)
+    }
+
+    const nextLanguage = this.getLanguage(file)
+    if (model.getLanguageId() !== nextLanguage) {
+      monaco.editor.setModelLanguage(model, nextLanguage)
+    }
+
+    return model
+  }
+
   getOrCreateModel(file: WorkspaceFile) {
     const existingModel = this.getModel(file.path)
     if (existingModel) {
-      this.models.set(file.path, existingModel)
-      if (existingModel.getValue() !== file.content) {
-        existingModel.setValue(file.content)
-      }
-
-      const nextLanguage = file.language ?? this.inferLanguage(file.path)
-      if (existingModel.getLanguageId() !== nextLanguage) {
-        monaco.editor.setModelLanguage(existingModel, nextLanguage)
-      }
-
-      return existingModel
+      return this.syncModel(file, existingModel)
     }
 
     const model = monaco.editor.createModel(
       file.content,
-      file.language ?? this.inferLanguage(file.path),
+      this.getLanguage(file),
       this.getUri(file.path),
     )
 

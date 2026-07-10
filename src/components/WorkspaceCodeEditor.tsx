@@ -1,18 +1,18 @@
 import Editor, { type OnChange, type OnMount } from "@monaco-editor/react"
 import { PanelRightClose } from "lucide-react"
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import * as monaco from "monaco-editor"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useMonacoReady } from "../hooks/useMonacoReady"
+import { useTscircuitTypeAcquisition } from "../hooks/useTscircuitTypeAcquisition"
 import {
   defaultCodeEditorOptions,
   defaultEditorTheme,
 } from "../monaco/editorDefaults"
-import { useMonacoReady } from "../hooks/useMonacoReady"
-import { useTscircuitTypeAcquisition } from "../hooks/useTscircuitTypeAcquisition"
+import { prepareMonacoTypeScriptWorkspace } from "../monaco/monacoTypeScript"
 import {
   createMonacoWorkspaceModelManager,
   type MonacoWorkspaceModelManager,
 } from "../monaco/monacoWorkspace"
-import { prepareMonacoTypeScriptWorkspace } from "../monaco/monacoTypeScript"
 import {
   getWorkspaceFileSetKey,
   getWorkspaceTypeAcquisitionSource,
@@ -115,7 +115,6 @@ export function WorkspaceCodeEditor({
   readOnly = false,
   isSaving = false,
   isStreaming = false,
-  isPriorityFileFetched,
   isFullyLoaded,
   totalFilesCount,
   loadedFilesCount,
@@ -158,7 +157,6 @@ export function WorkspaceCodeEditor({
   const currentContentRef = useRef(currentContent)
   currentContentRef.current = currentContent
   const currentFileIsBinary = currentEditorFile?.isBinary === true
-  const isPriorityFilePending = isPriorityFileFetched === false
   const isWorkspacePending = isWorkspaceLoadPending({
     isFullyLoaded,
     totalFilesCount,
@@ -177,13 +175,10 @@ export function WorkspaceCodeEditor({
     () => getWorkspaceTypeAcquisitionSource(workspaceFiles),
     [workspaceFiles],
   )
-  const isWorkspacePrepared =
-    isReady && !isWorkspacePending && preparedWorkspaceKey === workspaceKey
-
-  // Acquire dependencies only after Monaco can see the complete local module
-  // graph. Scanning every code file also covers imports outside the active file.
-  const areTypesReady = useTscircuitTypeAcquisition(workspaceTypeSource, {
-    enabled: isWorkspacePrepared && isCodeFile(currentFile),
+  // Dependencies and worker preparation improve diagnostics in the background;
+  // neither should delay opening the active file.
+  useTscircuitTypeAcquisition(workspaceTypeSource, {
+    enabled: isReady && isCodeFile(currentFile),
     readinessKey: workspaceKey,
   })
 
@@ -216,7 +211,7 @@ export function WorkspaceCodeEditor({
   // Keep a live model for every (text) file so the TypeScript language service
   // can resolve cross-file imports and surface diagnostics project-wide.
   useLayoutEffect(() => {
-    if (!isReady || isWorkspacePending) {
+    if (!isReady) {
       setPreparedWorkspaceKey(null)
       return
     }
@@ -229,6 +224,13 @@ export function WorkspaceCodeEditor({
       currentFile,
     )
     manager.syncFiles(orderedFiles)
+
+    // Keep the active model usable as files stream in, but wait until the
+    // workspace settles before initializing the full TypeScript worker graph.
+    if (isWorkspacePending) {
+      setPreparedWorkspaceKey(null)
+      return
+    }
 
     if (preparedWorkspaceKey === workspaceKey) return
 
@@ -344,11 +346,7 @@ export function WorkspaceCodeEditor({
     editorBody = (
       <BinaryFileNotice downloadUrl={currentEditorFile?.downloadUrl} />
     )
-  } else if (
-    !isWorkspacePrepared ||
-    (isCodeFile(currentFile) && !areTypesReady) ||
-    isPriorityFilePending
-  ) {
+  } else if (!isReady) {
     editorBody = <CenteredMessage>Loading editor…</CenteredMessage>
   } else if (currentFile) {
     editorBody = (
