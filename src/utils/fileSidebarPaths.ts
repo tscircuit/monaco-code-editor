@@ -1,3 +1,7 @@
+function stripTrailingSlash(path: string): string {
+  return path.endsWith("/") && path !== "/" ? path.slice(0, -1) : path
+}
+
 export function getCurrentFolderPath(
   selectedFolderForCreation: string | null,
   selectedItemId: string,
@@ -5,15 +9,13 @@ export function getCurrentFolderPath(
   if (selectedFolderForCreation) return selectedFolderForCreation
   if (!selectedItemId) return ""
 
-  const hasLeadingSlash = selectedItemId.startsWith("/")
-  const pathParts = selectedItemId.split("/")
+  const normalizedItemId = stripTrailingSlash(selectedItemId)
+  const lastSlashIndex = normalizedItemId.lastIndexOf("/")
 
-  if (pathParts.length > 1) {
-    const folderPath = pathParts.slice(0, -1).join("/")
-    return hasLeadingSlash ? `/${folderPath}` : folderPath
-  }
+  if (lastSlashIndex === -1) return ""
+  if (lastSlashIndex === 0) return "/"
 
-  return hasLeadingSlash ? "/" : ""
+  return normalizedItemId.slice(0, lastSlashIndex)
 }
 
 export function constructFilePath(
@@ -28,21 +30,18 @@ export function constructFilePath(
     return trimmedFileName
   }
 
-  if (!currentFolder || currentFolder === "/") {
-    return currentFolder === "/" ? `/${trimmedFileName}` : trimmedFileName
-  }
+  const normalizedFolder = stripTrailingSlash(currentFolder)
+  if (!normalizedFolder) return trimmedFileName
+  if (normalizedFolder === "/") return `/${trimmedFileName}`
 
-  return `${currentFolder}/${trimmedFileName}`
+  return `${normalizedFolder}/${trimmedFileName}`
 }
 
 export function getFolderPlaceholder(currentFolder: string): string {
-  if (!currentFolder || currentFolder === "/") {
+  const normalizedFolder = stripTrailingSlash(currentFolder)
+  if (!normalizedFolder || normalizedFolder === "/") {
     return "Enter file name (root folder)"
   }
 
-  const displayPath = currentFolder.startsWith("/")
-    ? currentFolder.slice(1)
-    : currentFolder
-
-  return `Enter file name (${displayPath}/)`
+  return `Enter file name (${normalizedFolder.replace(/^\//, "")}/)`
 }

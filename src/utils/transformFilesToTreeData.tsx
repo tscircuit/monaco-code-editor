@@ -39,6 +39,97 @@ interface TransformFilesToTreeDataProps {
   setOpenDropdownId: (id: string | null) => void
 }
 
+function stripLeadingSlash(path: string): string {
+  return path.startsWith("/") ? path.slice(1) : path
+}
+
+function getRenamedPath(itemId: string, newFilename: string): string {
+  const normalizedItemId = stripLeadingSlash(itemId)
+  const pathParts = normalizedItemId.split("/")
+  const nextPath =
+    pathParts.length > 1
+      ? `${pathParts.slice(0, -1).join("/")}/${newFilename}`
+      : newFilename
+
+  return itemId.startsWith("/") ? `/${nextPath}` : nextPath
+}
+
+function createFileActions({
+  itemId,
+  canModifyFiles,
+  openDropdownId,
+  setOpenDropdownId,
+  setRenamingFile,
+  handleDeleteFile,
+  setErrorMessage,
+}: {
+  itemId: string
+  canModifyFiles: boolean
+  openDropdownId: string | null
+  setOpenDropdownId: (id: string | null) => void
+  setRenamingFile: (filename: string | null) => void
+  handleDeleteFile: (props: DeleteFileProps) => DeleteFileResult
+  setErrorMessage: (message: string) => void
+}) {
+  if (!canModifyFiles) return undefined
+
+  return (
+    <DropdownMenu
+      key={itemId}
+      open={openDropdownId === itemId}
+      onOpenChange={(open) => {
+        setOpenDropdownId(open ? itemId : null)
+      }}
+    >
+      <DropdownMenuTrigger asChild>
+        <MoreVertical className="w-4 h-4 text-gray-500 hover:text-gray-700" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        className="w-fit bg-white shadow-lg rounded-md border-4 z-[100] border-white"
+        style={{
+          position: "absolute",
+          top: "100%",
+          left: "0",
+          marginTop: "0.5rem",
+          width: "8rem",
+          padding: "0.01rem",
+        }}
+      >
+        <DropdownMenuGroup>
+          <DropdownMenuItem
+            onClick={() => {
+              setRenamingFile(itemId)
+              setOpenDropdownId(null)
+            }}
+            className="flex items-center px-3 py-1 text-xs text-black hover:bg-gray-100 cursor-pointer"
+          >
+            <Pencil className="mr-2 h-3 w-3" />
+            Rename
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              const { fileDeleted } = handleDeleteFile({
+                filename: itemId,
+                onError: (error) => {
+                  toast.error(`Error deleting file ${itemId}: ${error.message}`)
+                },
+              })
+              if (fileDeleted) {
+                setErrorMessage("")
+              }
+              setOpenDropdownId(null)
+            }}
+            className="flex items-center px-3 py-1 text-xs text-red-600 hover:bg-gray-100 cursor-pointer"
+          >
+            <Trash2 className="mr-2 h-3 w-3" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 export const transformFilesToTreeData = ({
   files,
   currentFile,
@@ -55,12 +146,13 @@ export const transformFilesToTreeData = ({
   setOpenDropdownId,
 }: TransformFilesToTreeDataProps): TreeDataItem[] => {
   const root: Record<string, TreeNode> = {}
+  const shouldShowHiddenPath = isHiddenFile(
+    stripLeadingSlash(currentFile ?? ""),
+  )
 
   Object.keys(files).forEach((filePath) => {
     const hasLeadingSlash = filePath.startsWith("/")
-    const pathSegments = (hasLeadingSlash ? filePath.slice(1) : filePath)
-      .trim()
-      .split("/")
+    const pathSegments = stripLeadingSlash(filePath).trim().split("/")
     let currentNode: Record<string, TreeNode> = root
 
     pathSegments.forEach((segment, segmentIndex) => {
@@ -72,36 +164,16 @@ export const transformFilesToTreeData = ({
 
       if (
         !currentNode[segment] &&
-        (!isHiddenFile(relativePath) ||
-          isHiddenFile(
-            currentFile?.startsWith("/")
-              ? currentFile.slice(1)
-              : currentFile || "",
-          ))
+        (!isHiddenFile(relativePath) || shouldShowHiddenPath)
       ) {
         currentNode[segment] = {
           id: itemId,
           name: segment,
           isRenaming: renamingFile === itemId,
           onRename: (newFilename: string) => {
-            const oldPath = itemId
-            const pathParts = oldPath.split("/").filter((part) => part !== "")
-            let newPath: string
-
-            if (pathParts.length > 1) {
-              const folderPath = pathParts.slice(0, -1).join("/")
-              newPath = folderPath + "/" + newFilename
-            } else {
-              newPath = newFilename
-            }
-
-            if (oldPath.startsWith("/") && !newPath.startsWith("/")) {
-              newPath = "/" + newPath
-            }
-
             const { fileRenamed } = handleRenameFile({
               oldFilename: itemId,
-              newFilename: newPath,
+              newFilename: getRenamedPath(itemId, newFilename),
               onError: (error) => {
                 toast.error(`Error renaming file: ${error.message}`)
               },
@@ -124,63 +196,15 @@ export const transformFilesToTreeData = ({
           draggable: false,
           droppable: !isLeafNode,
           children: isLeafNode ? undefined : {},
-          actions: canModifyFiles ? (
-            <DropdownMenu
-              key={itemId}
-              open={openDropdownId === itemId}
-              onOpenChange={(open) => {
-                setOpenDropdownId(open ? itemId : null)
-              }}
-            >
-              <DropdownMenuTrigger asChild>
-                <MoreVertical className="w-4 h-4 text-gray-500 hover:text-gray-700" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="w-fit bg-white shadow-lg rounded-md border-4 z-[100] border-white"
-                style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: "0",
-                  marginTop: "0.5rem",
-                  width: "8rem",
-                  padding: "0.01rem",
-                }}
-              >
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setRenamingFile(itemId)
-                      setOpenDropdownId(null)
-                    }}
-                    className="flex items-center px-3 py-1 text-xs text-black hover:bg-gray-100 cursor-pointer"
-                  >
-                    <Pencil className="mr-2 h-3 w-3" />
-                    Rename
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      const { fileDeleted } = handleDeleteFile({
-                        filename: itemId,
-                        onError: (error) => {
-                          toast.error(
-                            `Error deleting file ${itemId}: ${error.message}`,
-                          )
-                        },
-                      })
-                      if (fileDeleted) {
-                        setErrorMessage("")
-                      }
-                      setOpenDropdownId(null)
-                    }}
-                    className="flex items-center px-3 py-1 text-xs text-red-600 hover:bg-gray-100 cursor-pointer"
-                  >
-                    <Trash2 className="mr-2 h-3 w-3" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : undefined,
+          actions: createFileActions({
+            itemId,
+            canModifyFiles,
+            openDropdownId,
+            setOpenDropdownId,
+            setRenamingFile,
+            handleDeleteFile,
+            setErrorMessage,
+          }),
           onContextMenu: canModifyFiles
             ? (e: React.MouseEvent) => {
                 e.preventDefault()
@@ -203,8 +227,6 @@ export const transformFilesToTreeData = ({
       children: item.children ? convertToArray(item.children) : undefined,
     }))
   }
-  return convertToArray(root).filter((x) => {
-    if (x.children?.length === 0) return false
-    return true
-  })
+
+  return convertToArray(root).filter((item) => item.children?.length !== 0)
 }
