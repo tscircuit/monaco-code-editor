@@ -1,5 +1,4 @@
 import { Folder, MoreVertical, Pencil, Trash2 } from "lucide-react"
-import toast from "react-hot-toast"
 import type * as React from "react"
 import {
   DropdownMenu,
@@ -9,12 +8,6 @@ import {
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu"
 import type { TreeDataItem } from "../components/ui/tree-view"
-import type {
-  DeleteFileProps,
-  DeleteFileResult,
-  RenameFileProps,
-  RenameFileResult,
-} from "../components/WorkspaceCodeEditor"
 import { getFileIconClassName, getFileIconComponent } from "./getFileIcon"
 import { isHiddenFile } from "./isHiddenFile"
 
@@ -27,13 +20,14 @@ interface TransformFilesToTreeDataProps {
   files: Record<FileName, string>
   currentFile: FileName | null
   renamingFile: string | null
-  handleRenameFile: (props: RenameFileProps) => RenameFileResult
-  handleDeleteFile: (props: DeleteFileProps) => DeleteFileResult
+  onRenameFile: (oldPath: string, newPath: string) => void
+  onDeleteFile: (path: string) => void
   setRenamingFile: (filename: string | null) => void
   onFileSelect: (filename: FileName) => void
   onFolderSelect: (folderPath: string) => void
   canModifyFiles: boolean
-  setErrorMessage: (message: string) => void
+  onError: (error: Error) => void
+  onOperationSuccess: () => void
   setSelectedFolderForCreation: (folder: string | null) => void
   openDropdownId: string | null
   setOpenDropdownId: (id: string | null) => void
@@ -60,16 +54,18 @@ function createFileActions({
   openDropdownId,
   setOpenDropdownId,
   setRenamingFile,
-  handleDeleteFile,
-  setErrorMessage,
+  onDeleteFile,
+  onError,
+  onOperationSuccess,
 }: {
   itemId: string
   canModifyFiles: boolean
   openDropdownId: string | null
   setOpenDropdownId: (id: string | null) => void
   setRenamingFile: (filename: string | null) => void
-  handleDeleteFile: (props: DeleteFileProps) => DeleteFileResult
-  setErrorMessage: (message: string) => void
+  onDeleteFile: (path: string) => void
+  onError: (error: Error) => void
+  onOperationSuccess: () => void
 }) {
   if (!canModifyFiles) return undefined
 
@@ -108,14 +104,15 @@ function createFileActions({
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {
-              const { fileDeleted } = handleDeleteFile({
-                filename: itemId,
-                onError: (error) => {
-                  toast.error(`Error deleting file ${itemId}: ${error.message}`)
-                },
-              })
-              if (fileDeleted) {
-                setErrorMessage("")
+              try {
+                onDeleteFile(itemId)
+                onOperationSuccess()
+              } catch (error) {
+                onError(
+                  error instanceof Error
+                    ? error
+                    : new Error(`Failed to delete ${itemId}`),
+                )
               }
               setOpenDropdownId(null)
             }}
@@ -134,13 +131,14 @@ export const transformFilesToTreeData = ({
   files,
   currentFile,
   renamingFile,
-  handleRenameFile,
-  handleDeleteFile,
+  onRenameFile,
+  onDeleteFile,
   setRenamingFile,
   onFileSelect,
   onFolderSelect,
   canModifyFiles,
-  setErrorMessage,
+  onError,
+  onOperationSuccess,
   setSelectedFolderForCreation,
   openDropdownId,
   setOpenDropdownId,
@@ -171,15 +169,16 @@ export const transformFilesToTreeData = ({
           name: segment,
           isRenaming: renamingFile === itemId,
           onRename: (newFilename: string) => {
-            const { fileRenamed } = handleRenameFile({
-              oldFilename: itemId,
-              newFilename: getRenamedPath(itemId, newFilename),
-              onError: (error) => {
-                toast.error(`Error renaming file: ${error.message}`)
-              },
-            })
-            if (fileRenamed) {
+            try {
+              onRenameFile(itemId, getRenamedPath(itemId, newFilename))
+              onOperationSuccess()
               setRenamingFile(null)
+            } catch (error) {
+              onError(
+                error instanceof Error
+                  ? error
+                  : new Error(`Failed to rename ${itemId}`),
+              )
             }
           },
           onCancelRename: () => {
@@ -196,22 +195,26 @@ export const transformFilesToTreeData = ({
           draggable: false,
           droppable: !isLeafNode,
           children: isLeafNode ? undefined : {},
-          actions: createFileActions({
-            itemId,
-            canModifyFiles,
-            openDropdownId,
-            setOpenDropdownId,
-            setRenamingFile,
-            handleDeleteFile,
-            setErrorMessage,
-          }),
-          onContextMenu: canModifyFiles
-            ? (e: React.MouseEvent) => {
-                e.preventDefault()
-                e.stopPropagation()
-                setOpenDropdownId(itemId)
-              }
+          actions: isLeafNode
+            ? createFileActions({
+                itemId,
+                canModifyFiles,
+                openDropdownId,
+                setOpenDropdownId,
+                setRenamingFile,
+                onDeleteFile,
+                onError,
+                onOperationSuccess,
+              })
             : undefined,
+          onContextMenu:
+            canModifyFiles && isLeafNode
+              ? (e: React.MouseEvent) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setOpenDropdownId(itemId)
+                }
+              : undefined,
         }
       }
 

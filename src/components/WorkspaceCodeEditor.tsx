@@ -1,7 +1,15 @@
 import Editor, { type OnChange, type OnMount } from "@monaco-editor/react"
 import { PanelRightClose } from "lucide-react"
 import * as monaco from "monaco-editor"
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { useMonacoReady } from "../hooks/useMonacoReady"
 import { useTscircuitTypeAcquisition } from "../hooks/useTscircuitTypeAcquisition"
 import {
@@ -36,55 +44,30 @@ export type EditorFile = {
   downloadUrl?: string
 }
 
-/**
- * File-management callback shapes, kept structurally compatible with
- * tscircuit.com's `useFileManagement` hook so the component can be used as a
- * drop-in for its CodeEditor.
- */
-export type CreateFileProps = {
-  newFileName: string
-  content?: string
-  onError: (error: Error) => void
-  openFile?: boolean
-}
-export type CreateFileResult = { newFileCreated: boolean }
-export type DeleteFileProps = {
-  filename: string
-  onError: (error: Error) => void
-}
-export type DeleteFileResult = { fileDeleted: boolean }
-export type RenameFileProps = {
-  oldFilename: string
-  newFilename: string
-  onError: (error: Error) => void
-}
-export type RenameFileResult = { fileRenamed: boolean }
-
 export type WorkspaceCodeEditorProps = {
   files: EditorFile[]
   currentFile: string | null
   onFileSelect: (path: string, lineNumber?: number) => void
-  onCodeChange: (code: string, filename?: string) => void
-  onFileContentChanged?: (path: string, content: string) => void
-  handleCreateFile?: (props: CreateFileProps) => CreateFileResult
-  handleDeleteFile?: (props: DeleteFileProps) => DeleteFileResult
-  handleRenameFile?: (props: RenameFileProps) => RenameFileResult
+  onFileContentChange: (path: string, content: string) => void
+  onCreateFile?: (path: string, content?: string) => void
+  onDeleteFile?: (path: string) => void
+  onRenameFile?: (oldPath: string, newPath: string) => void
   readOnly?: boolean
-  isSaving?: boolean
   isStreaming?: boolean
-  isPriorityFileFetched?: boolean
-  isFullyLoaded?: boolean
-  totalFilesCount?: number
-  loadedFilesCount?: number
-  pkgFilesLoaded?: boolean
-  /** Accepted for drop-in compatibility; unused by the standalone editor. */
-  pkg?: unknown
-  /** Accepted for drop-in compatibility; unused by the standalone editor. */
-  showImportAndFormatButtons?: boolean
+  isLoadingFiles?: boolean
+  loadingProgress?: string | null
   showSidebar?: boolean
   className?: string
   height?: string | number
   options?: monaco.editor.IStandaloneEditorConstructionOptions
+}
+
+/** Commands intended for toolbars and other UI rendered outside the editor. */
+export type WorkspaceCodeEditorHandle = {
+  focus: () => boolean
+  formatDocument: () => Promise<boolean>
+  revealLocation: (path: string, line?: number, column?: number) => boolean
+  setSidebarOpen: (open: boolean) => void
 }
 
 const isCodeFile = (path: string | null): path is string =>
@@ -103,27 +86,29 @@ function getLineFromSelection(
   return undefined
 }
 
-export function WorkspaceCodeEditor({
-  files,
-  currentFile,
-  onFileSelect,
-  onCodeChange,
-  onFileContentChanged,
-  handleCreateFile,
-  handleDeleteFile,
-  handleRenameFile,
-  readOnly = false,
-  isSaving = false,
-  isStreaming = false,
-  isFullyLoaded,
-  totalFilesCount,
-  loadedFilesCount,
-  pkgFilesLoaded,
-  showSidebar = true,
-  className,
-  height = "100%",
-  options,
-}: WorkspaceCodeEditorProps) {
+export const WorkspaceCodeEditor = forwardRef<
+  WorkspaceCodeEditorHandle,
+  WorkspaceCodeEditorProps
+>(function WorkspaceCodeEditor(
+  {
+    files,
+    currentFile,
+    onFileSelect,
+    onFileContentChange,
+    onCreateFile,
+    onDeleteFile,
+    onRenameFile,
+    readOnly = false,
+    isStreaming = false,
+    isLoadingFiles = false,
+    loadingProgress = null,
+    showSidebar = true,
+    className,
+    height = "100%",
+    options,
+  },
+  forwardedRef,
+) {
   const isReady = useMonacoReady()
   const [editorReady, setEditorReady] = useState(false)
   const [preparedWorkspaceKey, setPreparedWorkspaceKey] = useState<
@@ -140,7 +125,11 @@ export function WorkspaceCodeEditor({
     Record<string, monaco.editor.ICodeEditorViewState | null>
   >({})
   const previousFileRef = useRef<string | null>(null)
-  const pendingRevealRef = useRef<{ path: string; line?: number } | null>(null)
+  const pendingRevealRef = useRef<{
+    path: string
+    line?: number
+    column?: number
+  } | null>(null)
 
   // Refs that the (once-registered) editor opener and editor callbacks read so
   // they always see the latest props without re-registering.
@@ -156,13 +145,10 @@ export function WorkspaceCodeEditor({
   const currentContent = currentEditorFile?.content ?? ""
   const currentContentRef = useRef(currentContent)
   currentContentRef.current = currentContent
+  const currentFileRef = useRef(currentFile)
+  currentFileRef.current = currentFile
   const currentFileIsBinary = currentEditorFile?.isBinary === true
-  const isWorkspacePending = isWorkspaceLoadPending({
-    isFullyLoaded,
-    totalFilesCount,
-    loadedFilesCount,
-    pkgFilesLoaded,
-  })
+  const isWorkspacePending = isWorkspaceLoadPending({ isLoadingFiles })
   const workspaceFiles = useMemo(
     () =>
       files
@@ -196,17 +182,79 @@ export function WorkspaceCodeEditor({
     useMemo<monaco.editor.IStandaloneEditorConstructionOptions>(
       () => ({
         ...defaultCodeEditorOptions,
-        readOnly: readOnly || isSaving,
+        readOnly,
         ...options,
       }),
-      [readOnly, isSaving, options],
+      [readOnly, options],
     )
+
+  useImperativeHandle(
+    forwardedRef,
+    () => ({
+      focus() {
+        const editorInstance = editorRef.current
+        if (!editorInstance) return false
+        editorInstance.focus()
+        return true
+      },
+      async formatDocument() {
+        const action = editorRef.current?.getAction(
+          "editor.action.formatDocument",
+        )
+        if (!action) return false
+        await action.run()
+        return true
+      },
+      revealLocation(path, line = 1, column = 1) {
+        const file = filesRef.current.find(
+          (candidate) => candidate.path === path,
+        )
+        if (!file || file.isBinary) return false
+
+        const location = {
+          path: file.path,
+          line: Math.max(1, line),
+          column: Math.max(1, column),
+        }
+        pendingRevealRef.current = location
+
+        if (currentFileRef.current !== file.path) {
+          onFileSelectRef.current(file.path, location.line)
+          return true
+        }
+
+        const editorInstance = editorRef.current
+        if (!editorInstance) return true
+        editorInstance.revealPositionInCenter({
+          lineNumber: location.line,
+          column: location.column,
+        })
+        editorInstance.setPosition({
+          lineNumber: location.line,
+          column: location.column,
+        })
+        editorInstance.focus()
+        pendingRevealRef.current = null
+        return true
+      },
+      setSidebarOpen,
+    }),
+    [],
+  )
 
   // Dispose every model this component created when it unmounts.
   useEffect(() => {
     const manager = managerRef.current
     return () => manager?.dispose()
   }, [])
+
+  // Do not expose an editor instance after Monaco has left the render tree.
+  useEffect(() => {
+    if (isStreaming || currentFileIsBinary || !currentFile) {
+      editorRef.current = null
+      setEditorReady(false)
+    }
+  }, [currentFile, currentFileIsBinary, isStreaming])
 
   // Keep a live model for every (text) file so the TypeScript language service
   // can resolve cross-file imports and surface diagnostics project-wide.
@@ -306,8 +354,12 @@ export function WorkspaceCodeEditor({
 
     const pending = pendingRevealRef.current
     if (pending && pending.path === currentFile && pending.line) {
-      editorInstance.revealLineInCenter(pending.line)
-      editorInstance.setPosition({ lineNumber: pending.line, column: 1 })
+      const position = {
+        lineNumber: pending.line,
+        column: pending.column ?? 1,
+      }
+      editorInstance.revealPositionInCenter(position)
+      editorInstance.setPosition(position)
       editorInstance.focus()
       pendingRevealRef.current = null
     }
@@ -330,8 +382,7 @@ export function WorkspaceCodeEditor({
     if (!currentFile) return
     // Ignore echoes from programmatic model updates (external sync/streaming).
     if (nextContent === currentContentRef.current) return
-    onCodeChange(nextContent, currentFile)
-    onFileContentChanged?.(currentFile, nextContent)
+    onFileContentChange(currentFile, nextContent)
   }
 
   let editorBody: React.ReactNode
@@ -374,9 +425,11 @@ export function WorkspaceCodeEditor({
           files={files}
           currentFile={currentFile}
           onFileSelect={onFileSelect}
-          handleCreateFile={handleCreateFile}
-          handleDeleteFile={handleDeleteFile}
-          handleRenameFile={handleRenameFile}
+          onCreateFile={onCreateFile}
+          onDeleteFile={onDeleteFile}
+          onRenameFile={onRenameFile}
+          isLoadingFiles={isWorkspacePending}
+          loadingProgress={loadingProgress}
           open={sidebarOpen}
           onOpenChange={setSidebarOpen}
         />
@@ -397,7 +450,7 @@ export function WorkspaceCodeEditor({
       </div>
     </div>
   )
-}
+})
 
 function EditorTopBar({
   sidebarOpen,

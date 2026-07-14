@@ -1,8 +1,9 @@
 import "../src/styles.css"
-import { Toaster } from "react-hot-toast"
+import { useRef } from "react"
 import {
-  WorkspaceCodeEditor,
   type EditorFile,
+  type WorkspaceCodeEditorHandle,
+  WorkspaceCodeEditor,
 } from "../src/components/WorkspaceCodeEditor"
 import { useWorkspaceFiles } from "../src/hooks/useWorkspaceFiles"
 
@@ -121,15 +122,26 @@ A tiny tscircuit example board. Edit \`index.tsx\` to get started.
 ]
 
 export default function TscircuitWorkspaceFixture() {
+  const editorRef = useRef<WorkspaceCodeEditorHandle>(null)
   const workspace = useWorkspaceFiles({
     initialFiles,
     initialCurrentFile: "index.tsx",
   })
 
   return (
-    <div className="h-screen bg-white">
-      <WorkspaceCodeEditor {...workspace} />
-      <Toaster position="bottom-right" />
+    <div className="flex h-screen flex-col bg-white">
+      <div className="flex h-10 shrink-0 items-center justify-end gap-2 border-b border-slate-200 px-3">
+        <button
+          type="button"
+          className="rounded-md px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+          onClick={() => editorRef.current?.formatDocument()}
+        >
+          Format
+        </button>
+      </div>
+      <div className="min-h-0 flex-1">
+        <WorkspaceCodeEditor ref={editorRef} {...workspace} />
+      </div>
     </div>
   )
 }

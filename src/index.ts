@@ -1,18 +1,12 @@
 export { CodeEditor, defaultCodeEditorOptions } from "./components/CodeEditor"
 export { FileSidebar } from "./components/FileSidebar"
 export { WorkspaceCodeEditor } from "./components/WorkspaceCodeEditor"
-export { TreeView, type TreeDataItem } from "./components/ui/tree-view"
 
 export type { CodeEditorProps } from "./components/CodeEditor"
 export type { FileSidebarProps } from "./components/FileSidebar"
 export type {
-  CreateFileProps,
-  CreateFileResult,
-  DeleteFileProps,
-  DeleteFileResult,
   EditorFile,
-  RenameFileProps,
-  RenameFileResult,
+  WorkspaceCodeEditorHandle,
   WorkspaceCodeEditorProps,
 } from "./components/WorkspaceCodeEditor"
 
