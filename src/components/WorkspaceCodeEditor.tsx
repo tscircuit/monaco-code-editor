@@ -3,6 +3,7 @@ import { PanelRightClose } from "lucide-react"
 import * as monaco from "monaco-editor"
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
@@ -28,8 +29,13 @@ import {
   orderWorkspaceFilesForModelCreation,
 } from "../monaco/workspaceReadiness"
 import { isHiddenFile } from "../utils/isHiddenFile"
+import {
+  createWorkspaceReplacementEdits,
+  type WorkspaceSearchMatch,
+} from "../utils/workspaceSearch"
 import { FileSidebar } from "./FileSidebar"
 import { QuickOpen } from "./QuickOpen"
+import { WorkspaceSearch } from "./WorkspaceSearch"
 import {
   Select,
   SelectContent,
@@ -68,6 +74,7 @@ export type WorkspaceCodeEditorHandle = {
   focus: () => boolean
   formatDocument: () => Promise<boolean>
   openQuickOpen: () => void
+  openWorkspaceSearch: () => void
   revealLocation: (path: string, line?: number, column?: number) => boolean
   setSidebarOpen: (open: boolean) => void
 }
@@ -118,6 +125,7 @@ export const WorkspaceCodeEditor = forwardRef<
   >(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [quickOpenOpen, setQuickOpenOpen] = useState(false)
+  const [workspaceSearchOpen, setWorkspaceSearchOpen] = useState(false)
 
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
   const managerRef = useRef<MonacoWorkspaceModelManager | null>(null)
@@ -140,6 +148,8 @@ export const WorkspaceCodeEditor = forwardRef<
   filesRef.current = files
   const onFileSelectRef = useRef(onFileSelect)
   onFileSelectRef.current = onFileSelect
+  const onFileContentChangeRef = useRef(onFileContentChange)
+  onFileContentChangeRef.current = onFileContentChange
 
   const currentEditorFile = useMemo(
     () => files.find((file) => file.path === currentFile),
@@ -191,6 +201,76 @@ export const WorkspaceCodeEditor = forwardRef<
       [readOnly, options],
     )
 
+  const revealLocation = useCallback((path: string, line = 1, column = 1) => {
+    const file = filesRef.current.find((candidate) => candidate.path === path)
+    if (!file || file.isBinary) return false
+
+    const location = {
+      path: file.path,
+      line: Math.max(1, line),
+      column: Math.max(1, column),
+    }
+    pendingRevealRef.current = location
+
+    if (currentFileRef.current !== file.path) {
+      onFileSelectRef.current(file.path, location.line)
+      return true
+    }
+
+    const editorInstance = editorRef.current
+    if (!editorInstance) return true
+    editorInstance.revealPositionInCenter({
+      lineNumber: location.line,
+      column: location.column,
+    })
+    editorInstance.setPosition({
+      lineNumber: location.line,
+      column: location.column,
+    })
+    editorInstance.focus()
+    pendingRevealRef.current = null
+    return true
+  }, [])
+
+  const replaceWorkspaceMatches = useCallback(
+    (
+      matches: WorkspaceSearchMatch[],
+      replacement: string,
+      useRegex: boolean,
+    ) => {
+      const matchesByPath = new Map<string, WorkspaceSearchMatch[]>()
+      for (const match of matches) {
+        const pathMatches = matchesByPath.get(match.path) ?? []
+        pathMatches.push(match)
+        matchesByPath.set(match.path, pathMatches)
+      }
+
+      for (const [path, pathMatches] of matchesByPath) {
+        const model = managerRef.current?.getModel(path)
+        if (!model) continue
+
+        const edits = createWorkspaceReplacementEdits({
+          model,
+          matches: pathMatches,
+          replacement,
+          useRegex,
+        })
+        if (edits.length === 0) continue
+
+        model.pushStackElement()
+        model.pushEditOperations(null, edits, () => null)
+        model.pushStackElement()
+
+        // The mounted editor reports active-model changes through handleChange.
+        // Inactive models need an explicit immutable update to the controlled host.
+        if (editorRef.current?.getModel() !== model) {
+          onFileContentChangeRef.current(path, model.getValue())
+        }
+      }
+    },
+    [],
+  )
+
   useImperativeHandle(
     forwardedRef,
     () => ({
@@ -209,43 +289,17 @@ export const WorkspaceCodeEditor = forwardRef<
         return true
       },
       openQuickOpen() {
+        setWorkspaceSearchOpen(false)
         setQuickOpenOpen(true)
       },
-      revealLocation(path, line = 1, column = 1) {
-        const file = filesRef.current.find(
-          (candidate) => candidate.path === path,
-        )
-        if (!file || file.isBinary) return false
-
-        const location = {
-          path: file.path,
-          line: Math.max(1, line),
-          column: Math.max(1, column),
-        }
-        pendingRevealRef.current = location
-
-        if (currentFileRef.current !== file.path) {
-          onFileSelectRef.current(file.path, location.line)
-          return true
-        }
-
-        const editorInstance = editorRef.current
-        if (!editorInstance) return true
-        editorInstance.revealPositionInCenter({
-          lineNumber: location.line,
-          column: location.column,
-        })
-        editorInstance.setPosition({
-          lineNumber: location.line,
-          column: location.column,
-        })
-        editorInstance.focus()
-        pendingRevealRef.current = null
-        return true
+      openWorkspaceSearch() {
+        setQuickOpenOpen(false)
+        setWorkspaceSearchOpen(true)
       },
+      revealLocation,
       setSidebarOpen,
     }),
-    [],
+    [revealLocation],
   )
 
   // Dispose every model this component created when it unmounts.
@@ -255,22 +309,23 @@ export const WorkspaceCodeEditor = forwardRef<
   }, [])
 
   useEffect(() => {
-    const openQuickOpen = (event: KeyboardEvent) => {
-      if (
-        event.key.toLowerCase() !== "p" ||
-        (!event.ctrlKey && !event.metaKey) ||
-        event.altKey ||
-        event.shiftKey
-      ) {
-        return
-      }
+    const openWorkspaceCommand = (event: KeyboardEvent) => {
+      if ((!event.ctrlKey && !event.metaKey) || event.altKey) return
 
-      event.preventDefault()
-      setQuickOpenOpen(true)
+      const key = event.key.toLowerCase()
+      if (key === "p" && !event.shiftKey) {
+        event.preventDefault()
+        setWorkspaceSearchOpen(false)
+        setQuickOpenOpen(true)
+      } else if (key === "f" && event.shiftKey) {
+        event.preventDefault()
+        setQuickOpenOpen(false)
+        setWorkspaceSearchOpen(true)
+      }
     }
 
-    window.addEventListener("keydown", openQuickOpen)
-    return () => window.removeEventListener("keydown", openQuickOpen)
+    window.addEventListener("keydown", openWorkspaceCommand)
+    return () => window.removeEventListener("keydown", openWorkspaceCommand)
   }, [])
 
   // Do not expose an editor instance after Monaco has left the render tree.
@@ -480,6 +535,24 @@ export const WorkspaceCodeEditor = forwardRef<
         open={quickOpenOpen}
         onOpenChange={setQuickOpenOpen}
         onFileSelect={onFileSelect}
+      />
+
+      <WorkspaceSearch
+        files={files}
+        currentFile={currentFile}
+        open={workspaceSearchOpen}
+        canReplace={!readOnly}
+        getModel={(path) => managerRef.current?.getModel(path) ?? undefined}
+        onOpenChange={setWorkspaceSearchOpen}
+        onNavigate={(match) => {
+          setWorkspaceSearchOpen(false)
+          revealLocation(
+            match.path,
+            match.range.startLineNumber,
+            match.range.startColumn,
+          )
+        }}
+        onReplace={replaceWorkspaceMatches}
       />
     </div>
   )

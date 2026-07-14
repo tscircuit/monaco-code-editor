@@ -49,7 +49,9 @@ The ref exposes:
 - `focus()`
 - `formatDocument()`
 - `openQuickOpen()`
+- `openWorkspaceSearch()`
 - `revealLocation(path, line?, column?)`
 - `setSidebarOpen(open)`
 
 Press `Ctrl+P` or `Cmd+P` to fuzzy-search workspace files from the keyboard.
+Press `Ctrl+Shift+F` or `Cmd+Shift+F` to find and replace text across files.
