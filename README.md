@@ -48,5 +48,8 @@ The ref exposes:
 
 - `focus()`
 - `formatDocument()`
+- `openQuickOpen()`
 - `revealLocation(path, line?, column?)`
 - `setSidebarOpen(open)`
+
+Press `Ctrl+P` or `Cmd+P` to fuzzy-search workspace files from the keyboard.

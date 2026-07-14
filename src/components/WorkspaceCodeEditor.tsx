@@ -29,6 +29,7 @@ import {
 } from "../monaco/workspaceReadiness"
 import { isHiddenFile } from "../utils/isHiddenFile"
 import { FileSidebar } from "./FileSidebar"
+import { QuickOpen } from "./QuickOpen"
 import {
   Select,
   SelectContent,
@@ -66,6 +67,7 @@ export type WorkspaceCodeEditorProps = {
 export type WorkspaceCodeEditorHandle = {
   focus: () => boolean
   formatDocument: () => Promise<boolean>
+  openQuickOpen: () => void
   revealLocation: (path: string, line?: number, column?: number) => boolean
   setSidebarOpen: (open: boolean) => void
 }
@@ -115,6 +117,7 @@ export const WorkspaceCodeEditor = forwardRef<
     string | null
   >(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [quickOpenOpen, setQuickOpenOpen] = useState(false)
 
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
   const managerRef = useRef<MonacoWorkspaceModelManager | null>(null)
@@ -205,6 +208,9 @@ export const WorkspaceCodeEditor = forwardRef<
         await action.run()
         return true
       },
+      openQuickOpen() {
+        setQuickOpenOpen(true)
+      },
       revealLocation(path, line = 1, column = 1) {
         const file = filesRef.current.find(
           (candidate) => candidate.path === path,
@@ -246,6 +252,25 @@ export const WorkspaceCodeEditor = forwardRef<
   useEffect(() => {
     const manager = managerRef.current
     return () => manager?.dispose()
+  }, [])
+
+  useEffect(() => {
+    const openQuickOpen = (event: KeyboardEvent) => {
+      if (
+        event.key.toLowerCase() !== "p" ||
+        (!event.ctrlKey && !event.metaKey) ||
+        event.altKey ||
+        event.shiftKey
+      ) {
+        return
+      }
+
+      event.preventDefault()
+      setQuickOpenOpen(true)
+    }
+
+    window.addEventListener("keydown", openQuickOpen)
+    return () => window.removeEventListener("keydown", openQuickOpen)
   }, [])
 
   // Do not expose an editor instance after Monaco has left the render tree.
@@ -448,6 +473,14 @@ export const WorkspaceCodeEditor = forwardRef<
 
         <div className="relative min-h-0 flex-1">{editorBody}</div>
       </div>
+
+      <QuickOpen
+        files={files}
+        currentFile={currentFile}
+        open={quickOpenOpen}
+        onOpenChange={setQuickOpenOpen}
+        onFileSelect={onFileSelect}
+      />
     </div>
   )
 })
