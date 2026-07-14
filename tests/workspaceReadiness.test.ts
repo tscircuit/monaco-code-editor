@@ -7,23 +7,12 @@ import {
 } from "../src/monaco/workspaceReadiness"
 
 describe("isWorkspaceLoadPending", () => {
-  test("keeps Monaco gated while local or package files are incomplete", () => {
-    expect(isWorkspaceLoadPending({ isFullyLoaded: false })).toBe(true)
-    expect(isWorkspaceLoadPending({ pkgFilesLoaded: false })).toBe(true)
-    expect(
-      isWorkspaceLoadPending({ totalFilesCount: 2, loadedFilesCount: 1 }),
-    ).toBe(true)
+  test("keeps workspace preparation gated while files are loading", () => {
+    expect(isWorkspaceLoadPending({ isLoadingFiles: true })).toBe(true)
   })
 
   test("allows a complete or synchronously supplied workspace", () => {
-    expect(
-      isWorkspaceLoadPending({
-        isFullyLoaded: true,
-        pkgFilesLoaded: true,
-        totalFilesCount: 2,
-        loadedFilesCount: 2,
-      }),
-    ).toBe(false)
+    expect(isWorkspaceLoadPending({ isLoadingFiles: false })).toBe(false)
     expect(isWorkspaceLoadPending({})).toBe(false)
   })
 })

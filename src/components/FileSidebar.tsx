@@ -2,15 +2,7 @@ import { Loader2, PanelRightClose, PanelRightOpen, Plus } from "lucide-react"
 import { useMemo, useState } from "react"
 import { Input } from "./ui/input"
 import { TreeView } from "./ui/tree-view"
-import type {
-  CreateFileProps,
-  CreateFileResult,
-  DeleteFileProps,
-  DeleteFileResult,
-  EditorFile,
-  RenameFileProps,
-  RenameFileResult,
-} from "./WorkspaceCodeEditor"
+import type { EditorFile } from "./WorkspaceCodeEditor"
 import { cn } from "../lib/utils"
 import {
   constructFilePath,
@@ -23,9 +15,9 @@ export type FileSidebarProps = {
   files: EditorFile[]
   currentFile: string | null
   onFileSelect: (filename: string) => void
-  handleCreateFile?: (props: CreateFileProps) => CreateFileResult
-  handleDeleteFile?: (props: DeleteFileProps) => DeleteFileResult
-  handleRenameFile?: (props: RenameFileProps) => RenameFileResult
+  onCreateFile?: (path: string, content?: string) => void
+  onDeleteFile?: (path: string) => void
+  onRenameFile?: (oldPath: string, newPath: string) => void
   isLoadingFiles?: boolean
   loadingProgress?: string | null
   /** Controlled open state. When omitted the sidebar manages its own. */
@@ -34,16 +26,16 @@ export type FileSidebarProps = {
   className?: string
 }
 
-const noopRename = (): RenameFileResult => ({ fileRenamed: false })
-const noopDelete = (): DeleteFileResult => ({ fileDeleted: false })
+const noopRename = () => {}
+const noopDelete = () => {}
 
 export function FileSidebar({
   files,
   currentFile,
   onFileSelect,
-  handleCreateFile,
-  handleDeleteFile,
-  handleRenameFile,
+  onCreateFile,
+  onDeleteFile,
+  onRenameFile,
   isLoadingFiles = false,
   loadingProgress = null,
   open,
@@ -68,7 +60,7 @@ export function FileSidebar({
 
   const selectedItemId = currentFile ?? ""
   const canModifyFiles =
-    Boolean(handleRenameFile && handleDeleteFile) && !isLoadingFiles
+    Boolean(onRenameFile && onDeleteFile) && !isLoadingFiles
   const currentFolderPath = getCurrentFolderPath(
     selectedFolderForCreation,
     selectedItemId,
@@ -83,13 +75,14 @@ export function FileSidebar({
     files: filesRecord,
     currentFile,
     renamingFile,
-    handleRenameFile: handleRenameFile ?? noopRename,
-    handleDeleteFile: handleDeleteFile ?? noopDelete,
+    onRenameFile: onRenameFile ?? noopRename,
+    onDeleteFile: onDeleteFile ?? noopDelete,
     setRenamingFile,
     onFileSelect,
     onFolderSelect: setSelectedFolderForCreation,
     canModifyFiles,
-    setErrorMessage,
+    onError: (error) => setErrorMessage(error.message),
+    onOperationSuccess: () => setErrorMessage(""),
     setSelectedFolderForCreation,
     openDropdownId,
     setOpenDropdownId,
@@ -103,24 +96,21 @@ export function FileSidebar({
   }
 
   const handleCreateFileInline = () => {
-    if (!handleCreateFile) return
+    if (!onCreateFile) return
     const finalFileName = constructFilePath(newFileName, currentFolderPath)
     if (!finalFileName) {
       setErrorMessage("File name cannot be empty")
       return
     }
 
-    const { newFileCreated } = handleCreateFile({
-      newFileName: finalFileName,
-      openFile: true,
-      onError: (error) => {
-        setErrorMessage(error.message)
-      },
-    })
-
-    if (newFileCreated) {
+    try {
+      onCreateFile(finalFileName)
       resetCreateFileState()
       onFileSelect(finalFileName)
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to create file",
+      )
     }
   }
 
@@ -186,7 +176,7 @@ export function FileSidebar({
               )}
             </div>
           )}
-          {handleCreateFile && (
+          {onCreateFile && (
             <button
               onClick={() => setIsCreatingFile(true)}
               aria-label="Create new file"
@@ -234,32 +224,23 @@ export function FileSidebar({
               errorMessage ? "border-red-500 focus-visible:ring-red-500" : ""
             }
           />
-          {errorMessage && (
-            <div className="mt-1 px-1 text-xs text-red-500">{errorMessage}</div>
-          )}
           <div className="mt-1 px-1 text-xs text-slate-400">
             Tip: Use / for subfolders, Tab to auto-complete current folder
           </div>
         </div>
       )}
 
+      {errorMessage && (
+        <div className="px-3 py-2 text-xs text-red-600" role="alert">
+          {errorMessage}
+        </div>
+      )}
+
       <div className="min-h-0 flex-1 overflow-y-auto">
         <TreeView
           data={fileTree}
-          setSelectedItemId={(selectedFilePath) => {
-            if (
-              selectedFilePath &&
-              filesRecord[selectedFilePath] !== undefined
-            ) {
-              onFileSelect(selectedFilePath)
-            }
-          }}
+          setSelectedItemId={() => {}}
           selectedItemId={selectedItemId}
-          onSelectChange={(item) => {
-            if (item?.onClick) {
-              item.onClick()
-            }
-          }}
         />
       </div>
     </div>

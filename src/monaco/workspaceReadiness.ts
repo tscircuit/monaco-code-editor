@@ -1,25 +1,13 @@
 import type { WorkspaceFile } from "./monacoWorkspace"
 
 export type WorkspaceLoadState = {
-  isFullyLoaded?: boolean
-  totalFilesCount?: number
-  loadedFilesCount?: number
-  pkgFilesLoaded?: boolean
+  isLoadingFiles?: boolean
 }
 
 export function isWorkspaceLoadPending({
-  isFullyLoaded,
-  totalFilesCount,
-  loadedFilesCount,
-  pkgFilesLoaded,
+  isLoadingFiles,
 }: WorkspaceLoadState): boolean {
-  return (
-    isFullyLoaded === false ||
-    pkgFilesLoaded === false ||
-    (totalFilesCount != null &&
-      loadedFilesCount != null &&
-      loadedFilesCount < totalFilesCount)
-  )
+  return isLoadingFiles === true
 }
 
 export function getWorkspaceFileSetKey(

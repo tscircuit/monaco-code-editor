@@ -1,13 +1,5 @@
 import { useState } from "react"
-import type {
-  CreateFileProps,
-  CreateFileResult,
-  DeleteFileProps,
-  DeleteFileResult,
-  EditorFile,
-  RenameFileProps,
-  RenameFileResult,
-} from "../components/WorkspaceCodeEditor"
+import type { EditorFile } from "../components/WorkspaceCodeEditor"
 
 export type UseWorkspaceFilesOptions = {
   initialFiles: EditorFile[]
@@ -19,10 +11,10 @@ export type WorkspaceFilesController = {
   currentFile: string | null
   setCurrentFile: (path: string | null) => void
   onFileSelect: (path: string, lineNumber?: number) => void
-  onCodeChange: (code: string, filename?: string) => void
-  handleCreateFile: (props: CreateFileProps) => CreateFileResult
-  handleRenameFile: (props: RenameFileProps) => RenameFileResult
-  handleDeleteFile: (props: DeleteFileProps) => DeleteFileResult
+  onFileContentChange: (path: string, content: string) => void
+  onCreateFile: (path: string, content?: string) => void
+  onRenameFile: (oldPath: string, newPath: string) => void
+  onDeleteFile: (path: string) => void
 }
 
 /**
@@ -39,63 +31,44 @@ export function useWorkspaceFiles({
     initialCurrentFile ?? initialFiles[0]?.path ?? null,
   )
 
-  const onCodeChange = (code: string, filename?: string) => {
-    const target = filename ?? currentFile
-    if (!target) return
+  const onFileContentChange = (path: string, content: string) => {
     setFiles((prev) =>
-      prev.map((file) =>
-        file.path === target ? { ...file, content: code } : file,
-      ),
+      prev.map((file) => (file.path === path ? { ...file, content } : file)),
     )
   }
 
-  const handleCreateFile = ({
-    newFileName,
-    content = "",
-    openFile,
-    onError,
-  }: CreateFileProps): CreateFileResult => {
-    if (files.some((file) => file.path === newFileName)) {
-      onError(new Error(`File "${newFileName}" already exists`))
-      return { newFileCreated: false }
+  const onCreateFile = (path: string, content = "") => {
+    if (files.some((file) => file.path === path)) {
+      throw new Error(`File "${path}" already exists`)
     }
-    setFiles((prev) => [...prev, { path: newFileName, content }])
-    if (openFile) setCurrentFile(newFileName)
-    return { newFileCreated: true }
+    setFiles((prev) => [...prev, { path, content }])
   }
 
-  const handleRenameFile = ({
-    oldFilename,
-    newFilename,
-    onError,
-  }: RenameFileProps): RenameFileResult => {
-    if (files.some((file) => file.path === newFilename)) {
-      onError(new Error(`File "${newFilename}" already exists`))
-      return { fileRenamed: false }
+  const onRenameFile = (oldPath: string, newPath: string) => {
+    if (!files.some((file) => file.path === oldPath)) {
+      throw new Error(`File "${oldPath}" does not exist`)
+    }
+    if (files.some((file) => file.path === newPath)) {
+      throw new Error(`File "${newPath}" already exists`)
     }
     setFiles((prev) =>
       prev.map((file) =>
-        file.path === oldFilename ? { ...file, path: newFilename } : file,
+        file.path === oldPath ? { ...file, path: newPath } : file,
       ),
     )
-    setCurrentFile((current) =>
-      current === oldFilename ? newFilename : current,
-    )
-    return { fileRenamed: true }
+    setCurrentFile((current) => (current === oldPath ? newPath : current))
   }
 
-  const handleDeleteFile = ({
-    filename,
-    onError,
-  }: DeleteFileProps): DeleteFileResult => {
+  const onDeleteFile = (path: string) => {
+    if (!files.some((file) => file.path === path)) {
+      throw new Error(`File "${path}" does not exist`)
+    }
     if (files.length <= 1) {
-      onError(new Error("Cannot delete the last file"))
-      return { fileDeleted: false }
+      throw new Error("Cannot delete the last file")
     }
-    const fallback = files.find((file) => file.path !== filename)?.path ?? null
-    setFiles((prev) => prev.filter((file) => file.path !== filename))
-    setCurrentFile((current) => (current === filename ? fallback : current))
-    return { fileDeleted: true }
+    const fallback = files.find((file) => file.path !== path)?.path ?? null
+    setFiles((prev) => prev.filter((file) => file.path !== path))
+    setCurrentFile((current) => (current === path ? fallback : current))
   }
 
   return {
@@ -103,9 +76,9 @@ export function useWorkspaceFiles({
     currentFile,
     setCurrentFile,
     onFileSelect: (path) => setCurrentFile(path),
-    onCodeChange,
-    handleCreateFile,
-    handleRenameFile,
-    handleDeleteFile,
+    onFileContentChange,
+    onCreateFile,
+    onRenameFile,
+    onDeleteFile,
   }
 }

@@ -1,5 +1,5 @@
 import { RunFrame } from "@tscircuit/runframe/runner"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import "../src/styles.css"
 import type { EditorFile } from "../src"
 import { resolveTscircuitEntrypoint } from "../fixtures-support/resolveTscircuitEntrypoint"
@@ -32,9 +32,6 @@ export default function TscircuitWorkspaceWithRunframeFixture() {
     initialFiles,
     initialCurrentFile: BOARD_ENTRYPOINT,
   })
-  const [lastRenderState, setLastRenderState] = useState<
-    "idle" | "running" | "finished"
-  >("idle")
   const fsMap = useMemo(
     () =>
       workspace.files.reduce(
@@ -68,8 +65,6 @@ export default function TscircuitWorkspaceWithRunframeFixture() {
               showFileMenu={false}
               showRunButton
               forceLatestEvalVersion
-              onRenderStarted={() => setLastRenderState("running")}
-              onRenderFinished={() => setLastRenderState("finished")}
             />
           </div>
         </div>
