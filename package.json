@@ -1,6 +1,6 @@
 {
 	"name": "@tscircuit/monaco-code-editor",
-	"version": "0.0.9",
+	"version": "0.0.11",
 	"repository": "https://github.com/tscircuit/monaco-code-editor",
 	"publishConfig": {
 		"registry": "https://npm.pkg.github.com"
