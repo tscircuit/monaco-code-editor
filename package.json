@@ -6,28 +6,32 @@
 		"registry": "https://npm.pkg.github.com"
 	},
 	"files": [
-		"src"
+		"dist"
 	],
-	"main": "./src/index.ts",
-	"module": "./src/index.ts",
-	"types": "./src/index.ts",
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"type": "module",
 	"exports": {
 		".": {
-			"types": "./src/index.ts",
-			"import": "./src/index.ts",
-			"default": "./src/index.ts"
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
 		},
-		"./styles.css": "./src/styles.css"
+		"./styles.css": "./dist/index.css"
 	},
 	"scripts": {
-		"build": "tsc -p tsconfig.lib.json --noEmit",
+		"start": "cosmos",
+		"build": "tsup",
+		"build:site": "cosmos-export",
 		"dev": "cosmos",
 		"cosmos": "cosmos",
+		"cosmos-export": "cosmos-export",
 		"cosmos:export": "cosmos-export",
 		"format": "biome format . --write",
 		"format:check": "biome format .",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"vercel-build": "bun run build:site"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.1",
@@ -62,6 +66,7 @@
 		"react-query": "^3.39.3",
 		"tailwindcss": "^3.4.13",
 		"tailwindcss-animate": "^1.0.7",
+		"tsup": "^8.5.1",
 		"vite": "^8.1.0",
 		"zustand": "^5.0.14"
 	},
