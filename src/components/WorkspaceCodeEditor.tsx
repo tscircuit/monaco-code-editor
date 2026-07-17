@@ -33,6 +33,7 @@ import {
   createWorkspaceReplacementEdits,
   type WorkspaceSearchMatch,
 } from "../utils/workspaceSearch"
+import { Breadcrumbs } from "./Breadcrumbs"
 import { FileSidebar } from "./FileSidebar"
 import { QuickOpen } from "./QuickOpen"
 import { WorkspaceSearch } from "./WorkspaceSearch"
@@ -190,6 +191,9 @@ export const WorkspaceCodeEditor = forwardRef<
       ),
     [files, currentFile],
   )
+
+  const showBreadcrumbs =
+    isCodeFile(currentFile) && !isStreaming && editorReady
 
   const editorOptions =
     useMemo<monaco.editor.IStandaloneEditorConstructionOptions>(
@@ -523,6 +527,14 @@ export const WorkspaceCodeEditor = forwardRef<
             files={dropdownFiles}
             currentFile={currentFile}
             onFileSelect={onFileSelect}
+          />
+        )}
+
+        {showBreadcrumbs && (
+          <Breadcrumbs
+            editor={editorRef.current}
+            model={managerRef.current?.getModel(currentFile) ?? null}
+            filePath={currentFile}
           />
         )}
 

@@ -20,7 +20,7 @@ export const defaultCodeEditorOptions: editor.IStandaloneEditorConstructionOptio
     lineNumbersMinChars: 2,
     minimap: { enabled: false },
     overviewRulerBorder: false,
-    padding: { top: 16, bottom: 16 },
+    padding: { top: 8, bottom: 16 },
     renderLineHighlight: "line",
     scrollBeyondLastLine: false,
     smoothScrolling: true,

@@ -7,6 +7,19 @@ type TypeScriptLanguageServiceDefaults = {
   setEagerModelSync?(value: boolean): void
 }
 
+type TextSpan = { start: number; length: number }
+
+type NavigationTree = {
+  text: string
+  kind: string
+  spans: TextSpan[]
+  childItems?: NavigationTree[]
+}
+
+type TypeScriptWorker = {
+  getNavigationTree(fileName: string): Promise<NavigationTree | undefined>
+}
+
 type TypeScriptApi = {
   JsxEmit: {
     ReactJSX: number
@@ -23,8 +36,17 @@ type TypeScriptApi = {
   }
   typescriptDefaults: TypeScriptLanguageServiceDefaults
   getTypeScriptWorker(): Promise<
-    (...resources: monaco.Uri[]) => Promise<unknown>
+    (...resources: monaco.Uri[]) => Promise<TypeScriptWorker>
   >
+}
+
+/** A symbol (class, function, property, …) found in a file's outline. */
+export type DocumentSymbol = {
+  name: string
+  kind: string
+  range: monaco.IRange
+  selectionRange: monaco.IRange
+  children: DocumentSymbol[]
 }
 
 let isConfigured = false
@@ -73,4 +95,50 @@ export async function prepareMonacoTypeScriptWorkspace(
 ): Promise<void> {
   const getWorker = await getTypeScriptApi().getTypeScriptWorker()
   await getWorker(...resources)
+}
+
+function textSpanToRange(
+  model: monaco.editor.ITextModel,
+  span: TextSpan,
+): monaco.IRange {
+  const start = model.getPositionAt(span.start)
+  const end = model.getPositionAt(span.start + span.length)
+  return {
+    startLineNumber: start.lineNumber,
+    startColumn: start.column,
+    endLineNumber: end.lineNumber,
+    endColumn: end.column,
+  }
+}
+
+function convertNavigationTree(
+  item: NavigationTree,
+  model: monaco.editor.ITextModel,
+): DocumentSymbol {
+  const primarySpan = item.spans[0] ?? { start: 0, length: 0 }
+  return {
+    name: item.text,
+    kind: item.kind,
+    range: textSpanToRange(model, primarySpan),
+    selectionRange: textSpanToRange(model, primarySpan),
+    children: (item.childItems ?? []).map((child) =>
+      convertNavigationTree(child, model),
+    ),
+  }
+}
+
+/**
+ * Fetch a file's outline (classes, functions, properties, …) from the same
+ * TypeScript worker data Monaco's built-in "Go to Symbol" command uses.
+ */
+export async function getDocumentSymbols(
+  model: monaco.editor.ITextModel,
+): Promise<DocumentSymbol[]> {
+  const getWorker = await getTypeScriptApi().getTypeScriptWorker()
+  const worker = await getWorker(model.uri)
+  const root = await worker.getNavigationTree(model.uri.toString())
+  if (!root || model.isDisposed()) return []
+  return (root.childItems ?? []).map((item) =>
+    convertNavigationTree(item, model),
+  )
 }
