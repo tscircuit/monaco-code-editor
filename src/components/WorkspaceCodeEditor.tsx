@@ -192,8 +192,7 @@ export const WorkspaceCodeEditor = forwardRef<
     [files, currentFile],
   )
 
-  const showBreadcrumbs =
-    isCodeFile(currentFile) && !isStreaming && editorReady
+  const showBreadcrumbs = isCodeFile(currentFile) && !isStreaming && editorReady
 
   const editorOptions =
     useMemo<monaco.editor.IStandaloneEditorConstructionOptions>(
