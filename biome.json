@@ -12,6 +12,8 @@
       "!**/dist",
       "!**/package.json",
       "!src/styles.css",
+      "!src/styles.lib.css",
+      "!src/styles.compiled.css",
       "!fixtures-support/assets/sparkfun-qwiic-micropressure/**"
     ]
   },

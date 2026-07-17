@@ -2,6 +2,14 @@
 
 Standalone Monaco editor package for the tscircuit web editor.
 
+## Styles
+
+The `./styles.css` export is a precompiled, self-contained stylesheet —
+consumers do not need Tailwind or any `content` configuration. It is generated
+from `src/styles.lib.css` by `bun run build:css` and committed as
+`src/styles.compiled.css`; CI fails if it is stale. `src/styles.css` is the
+raw development entry used by the cosmos fixtures.
+
 ## Workspace editor
 
 Product-specific controls such as component imports, authentication, and save

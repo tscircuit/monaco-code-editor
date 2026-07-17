@@ -28,6 +28,14 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Check compiled stylesheet is up to date
+        run: |
+          bun run build:css
+          git diff --exit-code src/styles.compiled.css || {
+            echo "src/styles.compiled.css is stale. Run 'bun run build:css' and commit the result."
+            exit 1
+          }
+
       - name: Run tests
         run: bun test
 

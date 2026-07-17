@@ -51,4 +51,5 @@ export type {
   WorkspaceFile,
 } from "./monaco/monacoWorkspace"
 
-import "./styles.css"
+import "@fontsource-variable/geist/index.css"
+import "./styles.compiled.css"

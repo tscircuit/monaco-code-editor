@@ -1,31 +1,7 @@
+/*
+ * Development entry: compiled live by the consuming bundler's Tailwind
+ * (cosmos fixtures import this file). Published consumers get the
+ * precompiled src/styles.compiled.css via the "./styles.css" export instead.
+ */
 @import "@fontsource-variable/geist";
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-:root {
-  --radius: 0.625rem;
-  --background: #ffffff;
-  --foreground: #0f172a;
-}
-
-.dark {
-  --background: #0f172a;
-  --foreground: #f8fafc;
-}
-
-@layer base {
-  * {
-    @apply border-slate-200;
-  }
-
-  html {
-    font-family: "Geist Variable", sans-serif;
-  }
-
-  body {
-    @apply bg-white text-slate-900;
-    font-family: "Geist Variable", sans-serif;
-  }
-}
+@import "./styles.lib.css";

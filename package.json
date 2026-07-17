@@ -18,10 +18,11 @@
 			"import": "./src/index.ts",
 			"default": "./src/index.ts"
 		},
-		"./styles.css": "./src/styles.css"
+		"./styles.css": "./src/styles.compiled.css"
 	},
 	"scripts": {
-		"build": "tsc -p tsconfig.lib.json --noEmit",
+		"build": "bun run build:css && tsc -p tsconfig.lib.json --noEmit",
+		"build:css": "bun scripts/build-css.ts",
 		"dev": "cosmos",
 		"cosmos": "cosmos",
 		"cosmos:export": "cosmos-export",
