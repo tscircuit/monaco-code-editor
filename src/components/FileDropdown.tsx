@@ -122,7 +122,7 @@ export function FileDropdown({
                   setFocusedIndex(0)
                 }}
                 onKeyDown={handleKeyDown}
-                className="h-full w-full rounded-md border border-blue-500 bg-white pl-7 pr-7 text-xs text-slate-700 outline-none shadow-sm ring-1 ring-blue-500"
+                className="h-full w-full rounded-md border border-blue-500 bg-white pl-7 pr-7 text-xs text-slate-700 outline-none shadow-sm ring-1 ring-inset ring-blue-500"
               />
               {searchQuery && (
                 <button
