@@ -35,7 +35,7 @@ import {
   createWorkspaceReplacementEdits,
   type WorkspaceSearchMatch,
 } from "../utils/workspaceSearch"
-import { Breadcrumbs } from "./Breadcrumbs"
+
 import { FileDropdown } from "./FileDropdown"
 import { FileSidebar } from "./FileSidebar"
 import { QuickOpen } from "./QuickOpen"
@@ -527,18 +527,6 @@ export const WorkspaceCodeEditor = forwardRef<
                 onFileSelect={onFileSelect}
               />
             </div>
-            <div className="ml-2 h-4 w-px bg-gray-200" />
-            <Breadcrumbs
-              editor={editorReady ? editorRef.current : null}
-              model={
-                editorReady && currentFile
-                  ? (managerRef.current?.getModel(currentFile) ?? null)
-                  : null
-              }
-              filePath={currentFile}
-              files={files}
-              onFileSelect={onFileSelect}
-            />
           </div>
         )}
 
