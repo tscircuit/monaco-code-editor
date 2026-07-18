@@ -168,13 +168,13 @@ export function FileDropdown({
       <DropdownMenuTrigger asChild>
         <div
           ref={triggerRef}
-          className="relative flex h-7 w-32 sm:w-48 transition-[margin] duration-300 ease-in-out"
+          className="relative flex h-7 w-32 sm:w-48 m-1 transition-[margin] duration-300 ease-in-out"
         >
           {!open ? (
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="flex h-full w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 text-sm shadow-sm select-none"
+              className="flex h-full w-full items-center justify-between rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 px-3 text-sm shadow-sm select-none transition-colors"
             >
               <div className="flex items-center gap-2 overflow-hidden">
                 <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
@@ -208,7 +208,7 @@ export function FileDropdown({
                 }}
                 onKeyDown={handleKeyDown}
                 onClick={(e) => e.stopPropagation()}
-                className="h-full w-full rounded-md border border-blue-500 bg-white pl-7 pr-7 text-xs text-slate-700 outline-none shadow-sm ring-1 ring-inset ring-blue-500"
+                className="h-full w-full rounded-md border border-blue-500 bg-slate-50 pl-7 pr-7 text-xs text-slate-700 outline-none shadow-sm ring-1 ring-inset ring-blue-500"
               />
               {searchQuery && (
                 <button
@@ -230,8 +230,8 @@ export function FileDropdown({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        sideOffset={4}
-        className="z-50 w-[var(--radix-dropdown-menu-trigger-width)] max-h-64 overflow-y-auto p-1"
+        sideOffset={6}
+        className="z-50 w-[var(--radix-dropdown-menu-trigger-width)] max-h-64 overflow-y-auto p-1.5"
         // @ts-ignore - Radix DropdownMenu types sometimes omit this, but the underlying primitive uses it to manage focus
         onOpenAutoFocus={(e: any) => e.preventDefault()}
         onFocusOutside={(e: any) => {
