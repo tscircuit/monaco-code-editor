@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu"
 import type { TreeDataItem } from "../components/ui/tree-view"
-import { getFileIconClassName, getFileIconComponent } from "./getFileIcon"
+import { getFileIconClassName, getFileIconComponent } from "./icons"
 import { isHiddenFile } from "./isHiddenFile"
 
 type FileName = string

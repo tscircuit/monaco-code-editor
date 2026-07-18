@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { BookOpen, Braces, Code2, File } from "lucide-react"
-import {
-  getFileIconClassName,
-  getFileIconComponent,
-} from "../src/utils/getFileIcon"
+import { getFileIconClassName, getFileIconComponent } from "../src/utils/icons"
 
 describe("getFileIconComponent", () => {
   test("uses code icons for TypeScript and JavaScript files", () => {
