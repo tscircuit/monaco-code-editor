@@ -89,7 +89,7 @@ function createFileActions({
           left: "0",
           marginTop: "1rem",
           width: "8rem",
-          padding: "4px",
+          padding: "3px",
           borderRadius: "6px",
           boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06)",
         }}
@@ -100,13 +100,13 @@ function createFileActions({
               setRenamingFile(itemId)
               setOpenDropdownId(null)
             }}
-            className="flex items-center gap-2 px-2 text-xs text-slate-700 rounded cursor-pointer"
-            style={{ height: "32px" }}
+            className="flex items-center gap-1.5 px-1.5 text-xs text-slate-700 rounded cursor-pointer"
+            style={{ height: "24px" }}
           >
             <Pencil className="h-3 w-3 shrink-0" strokeWidth={2} />
             Rename
           </DropdownMenuItem>
-          <DropdownMenuSeparator className="my-1" />
+          <DropdownMenuSeparator className="my-0.5" />
           <DropdownMenuItem
             variant="destructive"
             onClick={() => {
@@ -122,8 +122,8 @@ function createFileActions({
               }
               setOpenDropdownId(null)
             }}
-            className="flex items-center gap-2 px-2 text-xs rounded cursor-pointer"
-            style={{ height: "32px" }}
+            className="flex items-center gap-1.5 px-1.5 text-xs rounded cursor-pointer"
+            style={{ height: "24px" }}
           >
             <Trash2 className="h-3 w-3 shrink-0" strokeWidth={1.75} />
             Delete
