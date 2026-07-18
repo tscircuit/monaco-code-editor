@@ -1,10 +1,7 @@
 import { ChevronsUpDown, Search, X } from "lucide-react"
 import { Popover as PopoverPrimitive } from "radix-ui"
 import { useEffect, useMemo, useRef, useState } from "react"
-import {
-  getFileIconClassName,
-  getFileIconComponent,
-} from "../utils/getFileIcon"
+import { getFileIconClassName, getFileIconComponent } from "../utils/icons"
 import type { EditorFile } from "./WorkspaceCodeEditor"
 
 export function FileDropdown({
