@@ -91,7 +91,8 @@ function createFileActions({
           width: "8rem",
           padding: "3px",
           borderRadius: "6px",
-          boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06)",
+          boxShadow:
+            "0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06)",
         }}
       >
         <DropdownMenuGroup>
