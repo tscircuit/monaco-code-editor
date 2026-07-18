@@ -1,8 +1,78 @@
-import { ChevronsUpDown, Search, X } from "lucide-react"
-import { Popover as PopoverPrimitive } from "radix-ui"
+import { ChevronsUpDown, Folder, Search, X } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { buildFileTree, type FileTreeNode } from "../utils/build-file-tree"
 import { getFileIconClassName, getFileIconComponent } from "../utils/icons"
 import type { EditorFile } from "./WorkspaceCodeEditor"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu"
+
+const menuItemBaseClassName =
+  "flex cursor-default select-none items-center gap-1.5 rounded-sm px-2 py-1.5 text-xs outline-none focus:bg-slate-100 focus:text-slate-900 data-[state=open]:bg-slate-100 data-[state=open]:text-slate-900 [&_svg:not([class*='size-'])]:size-3.5"
+
+function FileTreeMenuItems({
+  nodes,
+  onFileSelect,
+  setOpen,
+  firstItemRef,
+}: {
+  nodes: FileTreeNode[]
+  onFileSelect: (path: string) => void
+  setOpen: (open: boolean) => void
+  firstItemRef?: React.RefObject<HTMLDivElement | null>
+}) {
+  return (
+    <>
+      {nodes.map((node, index) =>
+        node.children ? (
+          <DropdownMenuSub key={node.path}>
+            <DropdownMenuSubTrigger
+              ref={index === 0 ? (firstItemRef as any) : undefined}
+              className={menuItemBaseClassName}
+            >
+              <Folder className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+              {node.name}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="max-h-72 overflow-y-auto">
+              <FileTreeMenuItems
+                nodes={node.children}
+                onFileSelect={onFileSelect}
+                setOpen={setOpen}
+              />
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        ) : (
+          <DropdownMenuItem
+            key={node.path}
+            ref={index === 0 ? (firstItemRef as any) : undefined}
+            onSelect={() => {
+              onFileSelect(node.path)
+              setOpen(false)
+            }}
+            className={menuItemBaseClassName}
+          >
+            {(() => {
+              const FileIcon = getFileIconComponent(node.name)
+              const iconClassName = getFileIconClassName(node.name)
+              return (
+                <FileIcon
+                  className={`h-3.5 w-3.5 shrink-0 ${iconClassName ?? "text-slate-400"}`}
+                />
+              )
+            })()}
+            {node.name}
+          </DropdownMenuItem>
+        ),
+      )}
+    </>
+  )
+}
 
 export function FileDropdown({
   files,
@@ -18,7 +88,8 @@ export function FileDropdown({
   const [focusedIndex, setFocusedIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  const anchorRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLDivElement>(null)
+  const firstItemRef = useRef<HTMLDivElement>(null)
 
   const [isMac, setIsMac] = useState(true)
 
@@ -26,12 +97,17 @@ export function FileDropdown({
     setIsMac(navigator.platform.toUpperCase().indexOf("MAC") >= 0)
   }, [])
 
+  const filePaths = useMemo(() => files.map((f) => f.path), [files])
+  const fileTree = useMemo(() => buildFileTree(filePaths), [filePaths])
+
   const filteredFiles = useMemo(() => {
     const query = searchQuery.trim().toLocaleLowerCase()
     return query
       ? files.filter((file) => file.path.toLocaleLowerCase().includes(query))
-      : files
+      : []
   }, [files, searchQuery])
+
+  const isSearching = searchQuery.trim().length > 0
 
   useEffect(() => {
     if (open) {
@@ -48,6 +124,14 @@ export function FileDropdown({
   }, [focusedIndex])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isSearching) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault()
+        firstItemRef.current?.focus()
+      }
+      return
+    }
+
     switch (e.key) {
       case "ArrowDown":
         e.preventDefault()
@@ -80,14 +164,15 @@ export function FileDropdown({
     : "Select file"
 
   return (
-    <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
-      <PopoverPrimitive.Anchor asChild>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
         <div
-          ref={anchorRef}
+          ref={triggerRef}
           className="relative flex h-7 w-32 sm:w-48 transition-[margin] duration-300 ease-in-out"
         >
           {!open ? (
             <button
+              type="button"
               onClick={() => setOpen(true)}
               className="flex h-full w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 text-sm shadow-sm select-none"
             >
@@ -122,13 +207,15 @@ export function FileDropdown({
                   setFocusedIndex(0)
                 }}
                 onKeyDown={handleKeyDown}
+                onClick={(e) => e.stopPropagation()}
                 className="h-full w-full rounded-md border border-blue-500 bg-white pl-7 pr-7 text-xs text-slate-700 outline-none shadow-sm ring-1 ring-inset ring-blue-500"
               />
               {searchQuery && (
                 <button
                   type="button"
                   aria-label="Clear search"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation()
                     setSearchQuery("")
                     inputRef.current?.focus()
                   }}
@@ -140,63 +227,67 @@ export function FileDropdown({
             </div>
           )}
         </div>
-      </PopoverPrimitive.Anchor>
-      <PopoverPrimitive.Portal>
-        <PopoverPrimitive.Content
-          align="start"
-          sideOffset={4}
-          className="z-50 w-[var(--radix-popover-trigger-width)] rounded-md border border-slate-200 bg-white shadow-md animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2"
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          onFocusOutside={(e) => {
-            if (anchorRef.current?.contains(e.target as Node)) {
-              e.preventDefault()
-            }
-          }}
-          onInteractOutside={(e) => {
-            if (anchorRef.current?.contains(e.target as Node)) {
-              e.preventDefault()
-            }
-          }}
-        >
-          <div ref={listRef} className="max-h-64 overflow-y-auto p-1">
-            {filteredFiles.length > 0 ? (
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        sideOffset={4}
+        className="z-50 w-[var(--radix-dropdown-menu-trigger-width)] max-h-64 overflow-y-auto p-1"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onFocusOutside={(e) => {
+          if (triggerRef.current?.contains(e.target as Node)) {
+            e.preventDefault()
+          }
+        }}
+        onInteractOutside={(e) => {
+          if (triggerRef.current?.contains(e.target as Node)) {
+            e.preventDefault()
+          }
+        }}
+      >
+        <div ref={listRef}>
+          {isSearching ? (
+            filteredFiles.length > 0 ? (
               filteredFiles.map((file, index) => {
                 const fileName = file.path.split("/").pop() ?? file.path
                 const FileIcon = getFileIconComponent(fileName)
                 const iconClassName = getFileIconClassName(fileName)
-                const isActive = file.path === currentFile
                 const isFocused = index === focusedIndex
                 return (
-                  <button
+                  <DropdownMenuItem
                     key={file.path}
                     data-file-item
-                    type="button"
-                    onClick={() => {
+                    onSelect={() => {
                       onFileSelect(file.path)
                       setOpen(false)
                     }}
                     onMouseEnter={() => setFocusedIndex(index)}
-                    className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs outline-none ${
-                      isFocused
-                        ? "bg-slate-100 text-slate-900"
-                        : "text-slate-600"
-                    } ${isActive ? "font-medium text-slate-900" : ""}`}
+                    className={
+                      menuItemBaseClassName +
+                      (isFocused ? " bg-slate-100 text-slate-900" : "")
+                    }
                   >
                     <FileIcon
                       className={`h-3.5 w-3.5 shrink-0 ${iconClassName ?? "text-slate-400"}`}
                     />
                     <span className="truncate">{file.path}</span>
-                  </button>
+                  </DropdownMenuItem>
                 )
               })
             ) : (
               <div className="px-2 py-3 text-center text-xs text-slate-400">
                 No files match &ldquo;{searchQuery}&rdquo;
               </div>
-            )}
-          </div>
-        </PopoverPrimitive.Content>
-      </PopoverPrimitive.Portal>
-    </PopoverPrimitive.Root>
+            )
+          ) : (
+            <FileTreeMenuItems
+              nodes={fileTree}
+              onFileSelect={onFileSelect}
+              setOpen={setOpen}
+              firstItemRef={firstItemRef}
+            />
+          )}
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
