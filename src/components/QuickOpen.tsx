@@ -1,13 +1,10 @@
 import { Search } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 import { useEffect, useMemo, useRef, useState } from "react"
-import {
-  getFileIconClassName,
-  getFileIconComponent,
-} from "../utils/getFileIcon"
+import { getFileIconClassName, getFileIconComponent } from "../utils/icons"
 import { getQuickOpenMatches } from "../utils/quickOpen"
-import type { EditorFile } from "./WorkspaceCodeEditor"
 import { Input } from "./ui/input"
+import type { EditorFile } from "./WorkspaceCodeEditor"
 
 export type QuickOpenProps = {
   files: EditorFile[]

@@ -40,6 +40,10 @@ type TypeScriptApi = {
   >
 }
 
+/** Files the TypeScript language service can provide symbols/diagnostics for. */
+export const isCodeFile = (path: string | null): path is string =>
+  !!path && /\.(ts|tsx|js|jsx)$/.test(path)
+
 /** A symbol (class, function, property, …) found in a file's outline. */
 export type DocumentSymbol = {
   name: string
