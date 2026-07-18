@@ -1,5 +1,5 @@
 import Editor, { type OnChange, type OnMount } from "@monaco-editor/react"
-import { PanelRightClose } from "lucide-react"
+import { ChevronsUpDown, PanelRightClose, Search, X } from "lucide-react"
 import * as monaco from "monaco-editor"
 import {
   forwardRef,
@@ -35,7 +35,8 @@ import {
   createWorkspaceReplacementEdits,
   type WorkspaceSearchMatch,
 } from "../utils/workspaceSearch"
-import { Breadcrumbs } from "./Breadcrumbs"
+
+import { FileDropdown } from "./FileDropdown"
 import { FileSidebar } from "./FileSidebar"
 import { QuickOpen } from "./QuickOpen"
 import { WorkspaceSearch } from "./WorkspaceSearch"
@@ -500,7 +501,7 @@ export const WorkspaceCodeEditor = forwardRef<
 
       <div className="flex h-full min-w-0 flex-1 flex-col">
         {(showSidebar || currentFile) && (
-          <div className="flex min-h-[30px] items-center border-b border-gray-200 px-2">
+          <div className="flex min-h-[36px] items-center gap-2 border-b border-gray-200 px-2 py-1">
             {showSidebar && (
               <button
                 className={`overflow-hidden p-0 text-gray-400 scale-90 transition-[width,opacity] duration-300 ease-in-out ${
@@ -517,17 +518,13 @@ export const WorkspaceCodeEditor = forwardRef<
                 </div>
               </button>
             )}
-            <Breadcrumbs
-              editor={editorReady ? editorRef.current : null}
-              model={
-                editorReady && currentFile
-                  ? (managerRef.current?.getModel(currentFile) ?? null)
-                  : null
-              }
-              filePath={currentFile}
-              files={files}
-              onFileSelect={onFileSelect}
-            />
+            <div className="flex-1 transition-[margin] duration-300 ease-in-out">
+              <FileDropdown
+                files={files}
+                currentFile={currentFile}
+                onFileSelect={onFileSelect}
+              />
+            </div>
           </div>
         )}
 
