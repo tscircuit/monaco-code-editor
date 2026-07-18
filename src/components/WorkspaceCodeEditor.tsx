@@ -501,7 +501,7 @@ export const WorkspaceCodeEditor = forwardRef<
 
       <div className="flex h-full min-w-0 flex-1 flex-col">
         {(showSidebar || currentFile) && (
-          <div className="flex min-h-[30px] items-center border-b border-gray-200 px-2">
+          <div className="flex min-h-[36px] items-center gap-2 border-b border-gray-200 px-2 py-1">
             {showSidebar && (
               <button
                 className={`overflow-hidden p-0 text-gray-400 scale-90 transition-[width,opacity] duration-300 ease-in-out ${
@@ -518,9 +518,7 @@ export const WorkspaceCodeEditor = forwardRef<
                 </div>
               </button>
             )}
-            <div
-              className={`transition-[margin] duration-300 ease-in-out ${sidebarOpen ? "-ml-2" : "-ml-1"}`}
-            >
+            <div className="flex-1 transition-[margin] duration-300 ease-in-out">
               <FileDropdown
                 files={files}
                 currentFile={currentFile}
