@@ -17,7 +17,10 @@ import {
   defaultCodeEditorOptions,
   defaultEditorTheme,
 } from "../monaco/editorDefaults"
-import { prepareMonacoTypeScriptWorkspace } from "../monaco/monacoTypeScript"
+import {
+  isCodeFile,
+  prepareMonacoTypeScriptWorkspace,
+} from "../monaco/monacoTypeScript"
 import {
   createMonacoWorkspaceModelManager,
   type MonacoWorkspaceModelManager,
@@ -28,7 +31,6 @@ import {
   isWorkspaceLoadPending,
   orderWorkspaceFilesForModelCreation,
 } from "../monaco/workspaceReadiness"
-import { isHiddenFile } from "../utils/isHiddenFile"
 import {
   createWorkspaceReplacementEdits,
   type WorkspaceSearchMatch,
@@ -37,13 +39,6 @@ import { Breadcrumbs } from "./Breadcrumbs"
 import { FileSidebar } from "./FileSidebar"
 import { QuickOpen } from "./QuickOpen"
 import { WorkspaceSearch } from "./WorkspaceSearch"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select"
 
 export type EditorFile = {
   path: string
@@ -79,9 +74,6 @@ export type WorkspaceCodeEditorHandle = {
   revealLocation: (path: string, line?: number, column?: number) => boolean
   setSidebarOpen: (open: boolean) => void
 }
-
-const isCodeFile = (path: string | null): path is string =>
-  !!path && /\.(ts|tsx|js|jsx)$/.test(path)
 
 function getLineFromSelection(
   selectionOrPosition?: monaco.IRange | monaco.IPosition,
@@ -181,18 +173,6 @@ export const WorkspaceCodeEditor = forwardRef<
     enabled: isReady && isCodeFile(currentFile),
     readinessKey: workspaceKey,
   })
-
-  // Files offered in the top-bar dropdown: hide noise (lockfiles, dist, …) but
-  // always keep the active file selectable even when it is itself hidden.
-  const dropdownFiles = useMemo(
-    () =>
-      files.filter(
-        (file) => !isHiddenFile(file.path) || file.path === currentFile,
-      ),
-    [files, currentFile],
-  )
-
-  const showBreadcrumbs = isCodeFile(currentFile) && !isStreaming && editorReady
 
   const editorOptions =
     useMemo<monaco.editor.IStandaloneEditorConstructionOptions>(
@@ -519,22 +499,36 @@ export const WorkspaceCodeEditor = forwardRef<
       )}
 
       <div className="flex h-full min-w-0 flex-1 flex-col">
-        {showSidebar && (
-          <EditorTopBar
-            sidebarOpen={sidebarOpen}
-            onShowSidebar={() => setSidebarOpen(true)}
-            files={dropdownFiles}
-            currentFile={currentFile}
-            onFileSelect={onFileSelect}
-          />
-        )}
-
-        {showBreadcrumbs && (
-          <Breadcrumbs
-            editor={editorRef.current}
-            model={managerRef.current?.getModel(currentFile) ?? null}
-            filePath={currentFile}
-          />
+        {(showSidebar || currentFile) && (
+          <div className="flex min-h-[30px] items-center border-b border-gray-200 px-2">
+            {showSidebar && (
+              <button
+                className={`overflow-hidden p-0 text-gray-400 scale-90 transition-[width,opacity] duration-300 ease-in-out ${
+                  sidebarOpen
+                    ? "w-0 pointer-events-none opacity-0"
+                    : "w-6 opacity-100"
+                }`}
+                onClick={() => setSidebarOpen(true)}
+                title="Show files"
+                aria-label="Show files"
+              >
+                <div className="flex h-6 w-6 items-center justify-center">
+                  <PanelRightClose />
+                </div>
+              </button>
+            )}
+            <Breadcrumbs
+              editor={editorReady ? editorRef.current : null}
+              model={
+                editorReady && currentFile
+                  ? (managerRef.current?.getModel(currentFile) ?? null)
+                  : null
+              }
+              filePath={currentFile}
+              files={files}
+              onFileSelect={onFileSelect}
+            />
+          </div>
         )}
 
         <div className="relative min-h-0 flex-1">{editorBody}</div>
@@ -568,66 +562,6 @@ export const WorkspaceCodeEditor = forwardRef<
     </div>
   )
 })
-
-function EditorTopBar({
-  sidebarOpen,
-  onShowSidebar,
-  files,
-  currentFile,
-  onFileSelect,
-}: {
-  sidebarOpen: boolean
-  onShowSidebar: () => void
-  files: EditorFile[]
-  currentFile: string | null
-  onFileSelect: (path: string) => void
-}) {
-  const fileLabelWidthClass = sidebarOpen
-    ? "max-w-[8rem] sm:max-w-[12rem]"
-    : "max-w-[12rem] sm:max-w-[16rem]"
-
-  return (
-    <div className="flex items-center gap-2 border-b border-gray-200 px-2 md:py-2">
-      <button
-        className={`overflow-hidden p-0 text-gray-400 scale-90 transition-[width,opacity] duration-300 ease-in-out ${
-          sidebarOpen ? "w-0 pointer-events-none opacity-0" : "w-6 opacity-100"
-        }`}
-        onClick={onShowSidebar}
-        title="Show files"
-        aria-label="Show files"
-      >
-        <div className="flex h-6 w-6 items-center justify-center">
-          <PanelRightClose />
-        </div>
-      </button>
-      <div>
-        <Select
-          value={currentFile ?? ""}
-          onValueChange={(selectedFile) => onFileSelect(selectedFile)}
-        >
-          <SelectTrigger
-            className={`h-7 w-32 bg-white px-3 select-none transition-[margin] duration-300 ease-in-out sm:w-48 ${
-              sidebarOpen ? "-ml-2" : "-ml-1"
-            }`}
-          >
-            <SelectValue placeholder="Select file" />
-          </SelectTrigger>
-          <SelectContent>
-            {files.map((file) => (
-              <SelectItem key={file.path} value={file.path} className="py-1">
-                <span
-                  className={`block truncate pr-1 text-xs ${fileLabelWidthClass}`}
-                >
-                  {file.path}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
-  )
-}
 
 function CenteredMessage({ children }: { children: React.ReactNode }) {
   return (

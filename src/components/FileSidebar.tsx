@@ -1,11 +1,4 @@
-import {
-  Loader2,
-  PanelRightClose,
-  PanelRightOpen,
-  Plus,
-  Search,
-  X,
-} from "lucide-react"
+import { Loader2, PanelRightClose, PanelRightOpen, Plus } from "lucide-react"
 import { useMemo, useState } from "react"
 import { cn } from "../lib/utils"
 import {
@@ -64,7 +57,6 @@ export function FileSidebar({
     string | null
   >(null)
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
-  const [fileSearchQuery, setFileSearchQuery] = useState("")
 
   const selectedItemId = currentFile ?? ""
   const canModifyFiles =
@@ -74,20 +66,9 @@ export function FileSidebar({
     selectedItemId,
   )
 
-  const normalizedFileSearchQuery = fileSearchQuery.trim()
-  const filteredFiles = useMemo(() => {
-    const query = normalizedFileSearchQuery.toLocaleLowerCase()
-    return query
-      ? files.filter((file) => file.path.toLocaleLowerCase().includes(query))
-      : files
-  }, [files, normalizedFileSearchQuery])
-
   const filesRecord = useMemo(
-    () =>
-      Object.fromEntries(
-        filteredFiles.map((file) => [file.path, file.content]),
-      ),
-    [filteredFiles],
+    () => Object.fromEntries(files.map((file) => [file.path, file.content])),
+    [files],
   )
 
   const fileTree = transformFilesToTreeData({
@@ -255,55 +236,16 @@ export function FileSidebar({
         </div>
       )}
 
-      <div className="border-b border-slate-200 p-2">
-        <div className="relative">
-          <Search
-            aria-hidden="true"
-            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-          />
-          <Input
-            type="search"
-            aria-label="Search files"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="Search files..."
-            value={fileSearchQuery}
-            onChange={(event) => setFileSearchQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Escape" && fileSearchQuery) {
-                event.preventDefault()
-                setFileSearchQuery("")
-              }
-            }}
-            className="h-9 rounded-md border-slate-300 bg-white pl-8 pr-8 text-sm shadow-sm placeholder:text-slate-500 focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-100 [&::-webkit-search-cancel-button]:hidden"
-          />
-          {fileSearchQuery && (
-            <button
-              type="button"
-              aria-label="Clear file search"
-              title="Clear search"
-              onClick={() => setFileSearchQuery("")}
-              className="absolute right-1.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            >
-              <X aria-hidden="true" className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-      </div>
-
       <div className="min-h-0 flex-1 overflow-y-auto">
         {fileTree.length > 0 ? (
           <TreeView
-            key={normalizedFileSearchQuery ? "file-search" : "all-files"}
             data={fileTree}
             setSelectedItemId={() => {}}
             selectedItemId={selectedItemId}
           />
         ) : (
           <div className="px-3 py-6 text-center text-xs text-slate-500">
-            {normalizedFileSearchQuery
-              ? `No files match “${normalizedFileSearchQuery}”`
-              : "No files"}
+            No files
           </div>
         )}
       </div>
