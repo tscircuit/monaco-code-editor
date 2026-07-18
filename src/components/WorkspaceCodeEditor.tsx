@@ -1,5 +1,5 @@
 import Editor, { type OnChange, type OnMount } from "@monaco-editor/react"
-import { PanelRightClose } from "lucide-react"
+import { ChevronsUpDown, PanelRightClose, Search, X } from "lucide-react"
 import * as monaco from "monaco-editor"
 import {
   forwardRef,
@@ -36,6 +36,7 @@ import {
   type WorkspaceSearchMatch,
 } from "../utils/workspaceSearch"
 import { Breadcrumbs } from "./Breadcrumbs"
+import { FileDropdown } from "./FileDropdown"
 import { FileSidebar } from "./FileSidebar"
 import { QuickOpen } from "./QuickOpen"
 import { WorkspaceSearch } from "./WorkspaceSearch"
@@ -517,6 +518,16 @@ export const WorkspaceCodeEditor = forwardRef<
                 </div>
               </button>
             )}
+            <div
+              className={`transition-[margin] duration-300 ease-in-out ${sidebarOpen ? "-ml-2" : "-ml-1"}`}
+            >
+              <FileDropdown
+                files={files}
+                currentFile={currentFile}
+                onFileSelect={onFileSelect}
+              />
+            </div>
+            <div className="ml-2 h-4 w-px bg-gray-200" />
             <Breadcrumbs
               editor={editorReady ? editorRef.current : null}
               model={
