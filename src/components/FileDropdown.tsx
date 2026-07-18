@@ -20,6 +20,12 @@ export function FileDropdown({
   const listRef = useRef<HTMLDivElement>(null)
   const anchorRef = useRef<HTMLDivElement>(null)
 
+  const [isMac, setIsMac] = useState(true)
+
+  useEffect(() => {
+    setIsMac(navigator.platform.toUpperCase().indexOf("MAC") >= 0)
+  }, [])
+
   const filteredFiles = useMemo(() => {
     const query = searchQuery.trim().toLocaleLowerCase()
     return query
@@ -91,7 +97,12 @@ export function FileDropdown({
                   {displayName}
                 </span>
               </div>
-              <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
+              <div className="flex items-center gap-1">
+                <kbd className="hidden sm:inline-flex h-4 items-center gap-0.5 rounded border border-slate-200 bg-slate-50 px-1 font-mono text-[10px] font-medium text-slate-400">
+                  <span className="text-xs">{isMac ? "⌘" : "Ctrl"}</span>P
+                </kbd>
+                <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
+              </div>
             </button>
           ) : (
             <div className="relative h-full w-full">
