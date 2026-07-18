@@ -1,8 +1,9 @@
 import * as monaco from "monaco-editor"
+import { getWorkspaceCompilerOptions } from "./getWorkspaceCompilerOptions"
 
 type TypeScriptLanguageServiceDefaults = {
-  getCompilerOptions(): Record<string, unknown>
-  setCompilerOptions(options: Record<string, unknown>): void
+  getCompilerOptions(): monaco.typescript.CompilerOptions
+  setCompilerOptions(options: monaco.typescript.CompilerOptions): void
   setDiagnosticsOptions(options: Record<string, unknown>): void
   setEagerModelSync?(value: boolean): void
 }
@@ -22,18 +23,19 @@ type TypeScriptWorker = {
 
 type TypeScriptApi = {
   JsxEmit: {
-    ReactJSX: number
+    ReactJSX: monaco.typescript.JsxEmit
   }
   ModuleKind: {
-    ESNext: number
+    ESNext: monaco.typescript.ModuleKind
   }
   ModuleResolutionKind: {
-    Bundler: number
-    NodeJs: number
+    Bundler: monaco.typescript.ModuleResolutionKind
+    NodeJs: monaco.typescript.ModuleResolutionKind
   }
   ScriptTarget: {
-    ES2022: number
+    ES2022: monaco.typescript.ScriptTarget
   }
+  javascriptDefaults: TypeScriptLanguageServiceDefaults
   typescriptDefaults: TypeScriptLanguageServiceDefaults
   getTypeScriptWorker(): Promise<
     (...resources: monaco.Uri[]) => Promise<TypeScriptWorker>
@@ -67,28 +69,30 @@ export function configureMonacoTypeScript() {
   }
 
   const typescript = getTypeScriptApi()
-  const compilerOptions = typescript.typescriptDefaults.getCompilerOptions()
+  for (const defaults of [
+    typescript.typescriptDefaults,
+    typescript.javascriptDefaults,
+  ]) {
+    defaults.setCompilerOptions(
+      getWorkspaceCompilerOptions({
+        compilerOptions: defaults.getCompilerOptions(),
+        jsxEmit: typescript.JsxEmit.ReactJSX,
+        moduleKind: typescript.ModuleKind.ESNext,
+        moduleResolutionKind:
+          typescript.ModuleResolutionKind.Bundler ??
+          typescript.ModuleResolutionKind.NodeJs,
+        scriptTarget: typescript.ScriptTarget.ES2022,
+      }),
+    )
 
-  typescript.typescriptDefaults.setCompilerOptions({
-    ...compilerOptions,
-    allowJs: true,
-    allowNonTsExtensions: true,
-    jsx: typescript.JsxEmit.ReactJSX,
-    module: typescript.ModuleKind.ESNext,
-    moduleResolution:
-      typescript.ModuleResolutionKind.Bundler ??
-      typescript.ModuleResolutionKind.NodeJs,
-    resolveJsonModule: true,
-    target: typescript.ScriptTarget.ES2022,
-  })
+    defaults.setEagerModelSync?.(true)
+  }
 
   typescript.typescriptDefaults.setDiagnosticsOptions({
     noSemanticValidation: false,
     noSyntaxValidation: false,
     onlyVisible: false,
   })
-
-  typescript.typescriptDefaults.setEagerModelSync?.(true)
 
   isConfigured = true
 }
