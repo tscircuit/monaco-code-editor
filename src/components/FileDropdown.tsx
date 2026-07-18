@@ -232,13 +232,14 @@ export function FileDropdown({
         align="start"
         sideOffset={4}
         className="z-50 w-[var(--radix-dropdown-menu-trigger-width)] max-h-64 overflow-y-auto p-1"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onFocusOutside={(e) => {
+        // @ts-ignore - Radix DropdownMenu types sometimes omit this, but the underlying primitive uses it to manage focus
+        onOpenAutoFocus={(e: any) => e.preventDefault()}
+        onFocusOutside={(e: any) => {
           if (triggerRef.current?.contains(e.target as Node)) {
             e.preventDefault()
           }
         }}
-        onInteractOutside={(e) => {
+        onInteractOutside={(e: any) => {
           if (triggerRef.current?.contains(e.target as Node)) {
             e.preventDefault()
           }
