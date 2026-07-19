@@ -28,11 +28,11 @@ export type WorkspaceSearchProps = {
   getModel: (path: string) => monaco.editor.ITextModel | undefined
   onOpenChange: (open: boolean) => void
   onNavigate: (match: WorkspaceSearchMatch) => void
-  onReplace: (
-    matches: WorkspaceSearchMatch[],
-    replacement: string,
-    useRegex: boolean,
-  ) => void
+  onReplace: (params: {
+    matches: WorkspaceSearchMatch[]
+    replacement: string
+    useRegex: boolean
+  }) => void
 }
 
 function SearchOptionButton({
@@ -165,7 +165,7 @@ export function WorkspaceSearch({
 
   const replaceMatches = (matches: WorkspaceSearchMatch[]) => {
     if (!canReplace || matches.length === 0) return
-    onReplace(matches, replacement, useRegex)
+    onReplace({ matches, replacement, useRegex })
     setSearchRevision((revision) => revision + 1)
   }
 
