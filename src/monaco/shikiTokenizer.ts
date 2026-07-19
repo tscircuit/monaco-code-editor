@@ -1,22 +1,20 @@
 import { shikiToMonaco } from "@shikijs/monaco"
-import { EncodedTokenMetadata, INITIAL } from "@shikijs/vscode-textmate"
+import {
+  EncodedTokenMetadata,
+  INITIAL,
+  type StateStack,
+} from "@shikijs/vscode-textmate"
 import * as monaco from "monaco-editor"
+import type { Highlighter } from "shiki/bundle/web"
 
 const FONT_STYLE_NONE = 0
 const FONT_STYLE_ITALIC = 1
 const FONT_STYLE_BOLD = 2
 const FONT_STYLE_UNDERLINE = 4
 const FONT_STYLE_STRIKETHROUGH = 8
-type ThemeSetting = {
-  scope?: string | string[]
-  settings?: {
-    foreground?: string
-    fontStyle?: string
-  }
-}
 
 class TokenizerState implements monaco.languages.IState {
-  constructor(private readonly ruleStack: unknown) {}
+  constructor(readonly ruleStack: StateStack) {}
 
   clone() {
     return new TokenizerState(this.ruleStack)
@@ -75,7 +73,7 @@ const normalizeFontStyleString = (fontStyle?: string) => {
 const getColorStyleKey = (color: string, fontStyle: string) =>
   fontStyle ? `${color}|${fontStyle}` : color
 
-export const installShikiMonaco = (highlighter: any, theme: string) => {
+export const installShikiMonaco = (highlighter: Highlighter, theme: string) => {
   shikiToMonaco(highlighter, monaco)
   monaco.editor.setTheme(theme)
 }
@@ -87,7 +85,7 @@ export const installShikiTokenizer = ({
   tokenizeMaxLineLength = 20000,
   tokenizeTimeLimit = 500,
 }: {
-  highlighter: any
+  highlighter: Highlighter
   languageId: string
   shikiLanguage: "tsx" | "typescript" | "jsx" | "javascript"
   tokenizeMaxLineLength?: number
@@ -99,7 +97,7 @@ export const installShikiTokenizer = ({
   const theme = highlighter.getTheme(highlighter.getLoadedThemes()[0]!)
   const colorStyleToScopeMap = new Map<string, string>()
 
-  theme.settings?.forEach(({ scope, settings }: ThemeSetting) => {
+  theme.settings?.forEach(({ scope, settings }) => {
     const foreground = normalizeColor(settings?.foreground)
     if (!foreground) return
 
@@ -130,7 +128,7 @@ export const installShikiTokenizer = ({
 
       const result = language.tokenizeLine2(
         line,
-        (state as TokenizerState)["ruleStack"] as never,
+        (state as TokenizerState).ruleStack,
         tokenizeTimeLimit,
       )
 
