@@ -161,6 +161,64 @@ export function expandWorkspaceReplacement({
   })
 }
 
+export type WorkspaceReplacementModel = Pick<
+  monaco.editor.ITextModel,
+  | "getOffsetAt"
+  | "getValue"
+  | "getValueInRange"
+  | "pushStackElement"
+  | "pushEditOperations"
+>
+
+/**
+ * Apply replacement matches across workspace models as one undoable edit per
+ * file. The mounted editor reports active-model changes through its onChange;
+ * inactive models notify the controlled host through onHiddenModelEdit.
+ */
+export function applyWorkspaceReplacements({
+  matches,
+  replacement,
+  useRegex,
+  getModel,
+  isActiveModel,
+  onHiddenModelEdit,
+}: {
+  matches: WorkspaceSearchMatch[]
+  replacement: string
+  useRegex: boolean
+  getModel: (path: string) => WorkspaceReplacementModel | undefined
+  isActiveModel: (model: WorkspaceReplacementModel) => boolean
+  onHiddenModelEdit: (path: string, content: string) => void
+}) {
+  const matchesByPath = new Map<string, WorkspaceSearchMatch[]>()
+  for (const match of matches) {
+    const pathMatches = matchesByPath.get(match.path) ?? []
+    pathMatches.push(match)
+    matchesByPath.set(match.path, pathMatches)
+  }
+
+  for (const [path, pathMatches] of matchesByPath) {
+    const model = getModel(path)
+    if (!model) continue
+
+    const edits = createWorkspaceReplacementEdits({
+      model,
+      matches: pathMatches,
+      replacement,
+      useRegex,
+    })
+    if (edits.length === 0) continue
+
+    model.pushStackElement()
+    model.pushEditOperations(null, edits, () => null)
+    model.pushStackElement()
+
+    if (!isActiveModel(model)) {
+      onHiddenModelEdit(path, model.getValue())
+    }
+  }
+}
+
 export function createWorkspaceReplacementEdits({
   model,
   matches,

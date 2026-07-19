@@ -1,38 +1,32 @@
 import Editor, { type OnChange, type OnMount } from "@monaco-editor/react"
 import { PanelRightClose } from "lucide-react"
-import * as monaco from "monaco-editor"
+import type * as monaco from "monaco-editor"
 import {
   forwardRef,
   useCallback,
   useEffect,
   useImperativeHandle,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react"
 import { useMonacoReady } from "../hooks/useMonacoReady"
 import { useTscircuitTypeAcquisition } from "../hooks/useTscircuitTypeAcquisition"
+import { useWorkspaceModelManager } from "../hooks/useWorkspaceModelManager"
+import { useWorkspaceNavigation } from "../hooks/useWorkspaceNavigation"
+import { useWorkspacePalettes } from "../hooks/useWorkspacePalettes"
 import {
   defaultCodeEditorOptions,
   defaultEditorTheme,
 } from "../monaco/editorDefaults"
-import {
-  isCodeFile,
-  prepareMonacoTypeScriptWorkspace,
-} from "../monaco/monacoTypeScript"
-import {
-  createMonacoWorkspaceModelManager,
-  type MonacoWorkspaceModelManager,
-} from "../monaco/monacoWorkspace"
+import { isCodeFile } from "../monaco/monacoTypeScript"
 import {
   getWorkspaceFileSetKey,
   getWorkspaceTypeAcquisitionSource,
   isWorkspaceLoadPending,
-  orderWorkspaceFilesForModelCreation,
 } from "../monaco/workspaceReadiness"
 import {
-  createWorkspaceReplacementEdits,
+  applyWorkspaceReplacements,
   type WorkspaceSearchMatch,
 } from "../utils/workspaceSearch"
 import { Breadcrumbs } from "./Breadcrumbs"
@@ -75,19 +69,6 @@ export type WorkspaceCodeEditorHandle = {
   setSidebarOpen: (open: boolean) => void
 }
 
-function getLineFromSelection(
-  selectionOrPosition?: monaco.IRange | monaco.IPosition,
-): number | undefined {
-  if (!selectionOrPosition) return undefined
-  if ("startLineNumber" in selectionOrPosition) {
-    return selectionOrPosition.startLineNumber
-  }
-  if ("lineNumber" in selectionOrPosition) {
-    return selectionOrPosition.lineNumber
-  }
-  return undefined
-}
-
 export const WorkspaceCodeEditor = forwardRef<
   WorkspaceCodeEditorHandle,
   WorkspaceCodeEditorProps
@@ -113,34 +94,20 @@ export const WorkspaceCodeEditor = forwardRef<
 ) {
   const isReady = useMonacoReady()
   const [editorReady, setEditorReady] = useState(false)
-  const [preparedWorkspaceKey, setPreparedWorkspaceKey] = useState<
-    string | null
-  >(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [quickOpenOpen, setQuickOpenOpen] = useState(false)
-  const [workspaceSearchOpen, setWorkspaceSearchOpen] = useState(false)
+  const {
+    quickOpenOpen,
+    setQuickOpenOpen,
+    workspaceSearchOpen,
+    setWorkspaceSearchOpen,
+    openQuickOpen,
+    openWorkspaceSearch,
+  } = useWorkspacePalettes()
 
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
-  const managerRef = useRef<MonacoWorkspaceModelManager | null>(null)
-  if (!managerRef.current) {
-    managerRef.current = createMonacoWorkspaceModelManager()
-  }
-  const viewStatesRef = useRef<
-    Record<string, monaco.editor.ICodeEditorViewState | null>
-  >({})
-  const previousFileRef = useRef<string | null>(null)
-  const pendingRevealRef = useRef<{
-    path: string
-    line?: number
-    column?: number
-  } | null>(null)
 
-  // Refs that the (once-registered) editor opener and editor callbacks read so
-  // they always see the latest props without re-registering.
-  const filesRef = useRef(files)
-  filesRef.current = files
-  const onFileSelectRef = useRef(onFileSelect)
-  onFileSelectRef.current = onFileSelect
+  // Refs that the editor callbacks read so they always see the latest props
+  // without re-registering.
   const onFileContentChangeRef = useRef(onFileContentChange)
   onFileContentChangeRef.current = onFileContentChange
 
@@ -151,8 +118,6 @@ export const WorkspaceCodeEditor = forwardRef<
   const currentContent = currentEditorFile?.content ?? ""
   const currentContentRef = useRef(currentContent)
   currentContentRef.current = currentContent
-  const currentFileRef = useRef(currentFile)
-  currentFileRef.current = currentFile
   const currentFileIsBinary = currentEditorFile?.isBinary === true
   const isWorkspacePending = isWorkspaceLoadPending({ isLoadingFiles })
   const workspaceFiles = useMemo(
@@ -174,6 +139,24 @@ export const WorkspaceCodeEditor = forwardRef<
     readinessKey: workspaceKey,
   })
 
+  const manager = useWorkspaceModelManager({
+    isReady,
+    workspaceFiles,
+    workspaceKey,
+    currentFile,
+    isWorkspacePending,
+  })
+
+  const { revealLocation, attachEditor } = useWorkspaceNavigation({
+    isReady,
+    editorReady,
+    files,
+    currentFile,
+    onFileSelect,
+    editorRef,
+    manager,
+  })
+
   const editorOptions =
     useMemo<monaco.editor.IStandaloneEditorConstructionOptions>(
       () => ({
@@ -184,74 +167,27 @@ export const WorkspaceCodeEditor = forwardRef<
       [readOnly, options],
     )
 
-  const revealLocation = useCallback((path: string, line = 1, column = 1) => {
-    const file = filesRef.current.find((candidate) => candidate.path === path)
-    if (!file || file.isBinary) return false
-
-    const location = {
-      path: file.path,
-      line: Math.max(1, line),
-      column: Math.max(1, column),
-    }
-    pendingRevealRef.current = location
-
-    if (currentFileRef.current !== file.path) {
-      onFileSelectRef.current(file.path, location.line)
-      return true
-    }
-
-    const editorInstance = editorRef.current
-    if (!editorInstance) return true
-    editorInstance.revealPositionInCenter({
-      lineNumber: location.line,
-      column: location.column,
-    })
-    editorInstance.setPosition({
-      lineNumber: location.line,
-      column: location.column,
-    })
-    editorInstance.focus()
-    pendingRevealRef.current = null
-    return true
-  }, [])
-
   const replaceWorkspaceMatches = useCallback(
-    (
-      matches: WorkspaceSearchMatch[],
-      replacement: string,
-      useRegex: boolean,
-    ) => {
-      const matchesByPath = new Map<string, WorkspaceSearchMatch[]>()
-      for (const match of matches) {
-        const pathMatches = matchesByPath.get(match.path) ?? []
-        pathMatches.push(match)
-        matchesByPath.set(match.path, pathMatches)
-      }
-
-      for (const [path, pathMatches] of matchesByPath) {
-        const model = managerRef.current?.getModel(path)
-        if (!model) continue
-
-        const edits = createWorkspaceReplacementEdits({
-          model,
-          matches: pathMatches,
-          replacement,
-          useRegex,
-        })
-        if (edits.length === 0) continue
-
-        model.pushStackElement()
-        model.pushEditOperations(null, edits, () => null)
-        model.pushStackElement()
-
-        // The mounted editor reports active-model changes through handleChange.
-        // Inactive models need an explicit immutable update to the controlled host.
-        if (editorRef.current?.getModel() !== model) {
-          onFileContentChangeRef.current(path, model.getValue())
-        }
-      }
+    ({
+      matches,
+      replacement,
+      useRegex,
+    }: {
+      matches: WorkspaceSearchMatch[]
+      replacement: string
+      useRegex: boolean
+    }) => {
+      applyWorkspaceReplacements({
+        matches,
+        replacement,
+        useRegex,
+        getModel: (path) => manager.getModel(path) ?? undefined,
+        isActiveModel: (model) => editorRef.current?.getModel() === model,
+        onHiddenModelEdit: (path, content) =>
+          onFileContentChangeRef.current(path, content),
+      })
     },
-    [],
+    [manager],
   )
 
   useImperativeHandle(
@@ -271,45 +207,13 @@ export const WorkspaceCodeEditor = forwardRef<
         await action.run()
         return true
       },
-      openQuickOpen() {
-        setWorkspaceSearchOpen(false)
-        setQuickOpenOpen(true)
-      },
-      openWorkspaceSearch() {
-        setQuickOpenOpen(false)
-        setWorkspaceSearchOpen(true)
-      },
+      openQuickOpen,
+      openWorkspaceSearch,
       revealLocation,
       setSidebarOpen,
     }),
-    [revealLocation],
+    [revealLocation, openQuickOpen, openWorkspaceSearch],
   )
-
-  // Dispose every model this component created when it unmounts.
-  useEffect(() => {
-    const manager = managerRef.current
-    return () => manager?.dispose()
-  }, [])
-
-  useEffect(() => {
-    const openWorkspaceCommand = (event: KeyboardEvent) => {
-      if ((!event.ctrlKey && !event.metaKey) || event.altKey) return
-
-      const key = event.key.toLowerCase()
-      if (key === "p" && !event.shiftKey) {
-        event.preventDefault()
-        setWorkspaceSearchOpen(false)
-        setQuickOpenOpen(true)
-      } else if (key === "f" && event.shiftKey) {
-        event.preventDefault()
-        setQuickOpenOpen(false)
-        setWorkspaceSearchOpen(true)
-      }
-    }
-
-    window.addEventListener("keydown", openWorkspaceCommand)
-    return () => window.removeEventListener("keydown", openWorkspaceCommand)
-  }, [])
 
   // Do not expose an editor instance after Monaco has left the render tree.
   useEffect(() => {
@@ -319,124 +223,8 @@ export const WorkspaceCodeEditor = forwardRef<
     }
   }, [currentFile, currentFileIsBinary, isStreaming])
 
-  // Keep a live model for every (text) file so the TypeScript language service
-  // can resolve cross-file imports and surface diagnostics project-wide.
-  useLayoutEffect(() => {
-    if (!isReady) {
-      setPreparedWorkspaceKey(null)
-      return
-    }
-
-    const manager = managerRef.current
-    if (!manager) return
-
-    const orderedFiles = orderWorkspaceFilesForModelCreation(
-      workspaceFiles,
-      currentFile,
-    )
-    manager.syncFiles(orderedFiles)
-
-    // Keep the active model usable as files stream in, but wait until the
-    // workspace settles before initializing the full TypeScript worker graph.
-    if (isWorkspacePending) {
-      setPreparedWorkspaceKey(null)
-      return
-    }
-
-    if (preparedWorkspaceKey === workspaceKey) return
-
-    setPreparedWorkspaceKey(null)
-    const codeModelUris = orderedFiles
-      .filter((file) => isCodeFile(file.path))
-      .map((file) => manager.getUri(file.path))
-
-    let isActive = true
-    void prepareMonacoTypeScriptWorkspace(codeModelUris)
-      .then(() => {
-        if (isActive) setPreparedWorkspaceKey(workspaceKey)
-      })
-      .catch((error) => {
-        console.warn("Failed to prepare TypeScript workspace", error)
-      })
-
-    return () => {
-      isActive = false
-    }
-  }, [
-    isReady,
-    isWorkspacePending,
-    workspaceFiles,
-    workspaceKey,
-    currentFile,
-    preparedWorkspaceKey,
-  ])
-
-  // Route cross-file "go to definition" through onFileSelect so navigation into
-  // another workspace file switches the active file instead of failing silently.
-  useEffect(() => {
-    if (!isReady) return
-    if (typeof monaco.editor.registerEditorOpener !== "function") return
-
-    const disposable = monaco.editor.registerEditorOpener({
-      openCodeEditor(_source, resource, selectionOrPosition) {
-        const stripped = resource.path.replace(/^\/+/, "")
-        const file = filesRef.current.find(
-          (candidate) =>
-            candidate.path === stripped ||
-            `/${candidate.path}` === resource.path,
-        )
-        if (!file) return false
-
-        const line = getLineFromSelection(selectionOrPosition)
-        pendingRevealRef.current = { path: file.path, line }
-        onFileSelectRef.current(file.path, line)
-        return true
-      },
-    })
-
-    return () => disposable.dispose()
-  }, [isReady])
-
-  // Swap the editor's model when the active file changes, preserving per-file
-  // cursor/scroll state and applying any pending go-to-definition reveal.
-  useEffect(() => {
-    if (!isReady || !editorReady || !editorRef.current || !currentFile) return
-    const editorInstance = editorRef.current
-
-    const model = managerRef.current?.getModel(currentFile)
-    if (model && editorInstance.getModel() !== model) {
-      const previousFile = previousFileRef.current
-      if (previousFile) {
-        viewStatesRef.current[previousFile] = editorInstance.saveViewState()
-      }
-      editorInstance.setModel(model)
-      const restored = viewStatesRef.current[currentFile]
-      if (restored) editorInstance.restoreViewState(restored)
-      previousFileRef.current = currentFile
-    }
-
-    const pending = pendingRevealRef.current
-    if (pending && pending.path === currentFile && pending.line) {
-      const position = {
-        lineNumber: pending.line,
-        column: pending.column ?? 1,
-      }
-      editorInstance.revealPositionInCenter(position)
-      editorInstance.setPosition(position)
-      editorInstance.focus()
-      pendingRevealRef.current = null
-    }
-  }, [currentFile, isReady, editorReady, files])
-
   const handleMount: OnMount = (editorInstance) => {
-    editorRef.current = editorInstance
-    if (currentFile) {
-      const model = managerRef.current?.getModel(currentFile)
-      if (model) {
-        editorInstance.setModel(model)
-        previousFileRef.current = currentFile
-      }
-    }
+    attachEditor(editorInstance)
     setEditorReady(true)
   }
 
@@ -521,7 +309,7 @@ export const WorkspaceCodeEditor = forwardRef<
               editor={editorReady ? editorRef.current : null}
               model={
                 editorReady && currentFile
-                  ? (managerRef.current?.getModel(currentFile) ?? null)
+                  ? (manager.getModel(currentFile) ?? null)
                   : null
               }
               filePath={currentFile}
@@ -547,7 +335,7 @@ export const WorkspaceCodeEditor = forwardRef<
         currentFile={currentFile}
         open={workspaceSearchOpen}
         canReplace={!readOnly}
-        getModel={(path) => managerRef.current?.getModel(path) ?? undefined}
+        getModel={(path) => manager.getModel(path) ?? undefined}
         onOpenChange={setWorkspaceSearchOpen}
         onNavigate={(match) => {
           setWorkspaceSearchOpen(false)
