@@ -5,6 +5,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu"
 import type { TreeDataItem } from "../components/ui/tree-view"
@@ -81,14 +82,17 @@ function createFileActions({
         <MoreVertical className="w-4 h-4 text-gray-500 hover:text-gray-700" />
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="w-fit bg-white shadow-lg rounded-md border-4 z-[100] border-white"
+        className="bg-white border border-slate-200 z-[100]"
         style={{
           position: "absolute",
           top: "100%",
           left: "0",
-          marginTop: "0.5rem",
+          marginTop: "1rem",
           width: "8rem",
-          padding: "0.01rem",
+          padding: "3px",
+          borderRadius: "6px",
+          boxShadow:
+            "0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06)",
         }}
       >
         <DropdownMenuGroup>
@@ -97,12 +101,15 @@ function createFileActions({
               setRenamingFile(itemId)
               setOpenDropdownId(null)
             }}
-            className="flex items-center px-3 py-1 text-xs text-black hover:bg-gray-100 cursor-pointer"
+            className="flex items-center gap-1.5 px-1.5 text-xs text-slate-700 rounded cursor-pointer"
+            style={{ height: "24px" }}
           >
-            <Pencil className="mr-2 h-3 w-3" />
+            <Pencil className="h-3 w-3 shrink-0" strokeWidth={2} />
             Rename
           </DropdownMenuItem>
+          <DropdownMenuSeparator className="my-0.5" />
           <DropdownMenuItem
+            variant="destructive"
             onClick={() => {
               try {
                 onDeleteFile(itemId)
@@ -116,9 +123,10 @@ function createFileActions({
               }
               setOpenDropdownId(null)
             }}
-            className="flex items-center px-3 py-1 text-xs text-red-600 hover:bg-gray-100 cursor-pointer"
+            className="flex items-center gap-1.5 px-1.5 text-xs rounded cursor-pointer"
+            style={{ height: "24px" }}
           >
-            <Trash2 className="mr-2 h-3 w-3" />
+            <Trash2 className="h-3 w-3 shrink-0" strokeWidth={1.75} />
             Delete
           </DropdownMenuItem>
         </DropdownMenuGroup>
