@@ -1,10 +1,16 @@
 import * as monaco from "monaco-editor"
-import { type RefObject, useCallback, useEffect, useRef } from "react"
+import { type RefObject, useCallback, useEffect, useRef, useState } from "react"
 import type { MonacoWorkspaceModelManager } from "../monaco/monacoWorkspace"
 
 type NavigableFile = {
   path: string
   isBinary?: boolean
+}
+
+type PendingNavigation = {
+  path: string
+  line?: number
+  column?: number
 }
 
 function getLineFromSelection(
@@ -20,12 +26,26 @@ function getLineFromSelection(
   return undefined
 }
 
+function revealPosition(
+  editorInstance: monaco.editor.IStandaloneCodeEditor,
+  line: number | undefined,
+  column = 1,
+) {
+  if (line) {
+    const position = { lineNumber: line, column }
+    editorInstance.revealPositionInCenter(position)
+    editorInstance.setPosition(position)
+  }
+  editorInstance.focus()
+}
+
 /**
  * Cross-file navigation for the workspace editor: routes "go to definition"
  * through onFileSelect so navigating into another workspace file switches the
- * active file instead of failing silently, swaps the editor's model when the
- * active file changes while preserving per-file cursor/scroll state, and
- * applies any pending reveal once the target file becomes active.
+ * active file instead of failing silently. All navigation requests (file
+ * picks, go-to-definition, reveal-in-place) just record intent; a single
+ * effect below is the only place that swaps the editor's model and applies
+ * the reveal, once the target model is actually attached.
  */
 export function useWorkspaceNavigation({
   isReady,
@@ -48,11 +68,10 @@ export function useWorkspaceNavigation({
     Record<string, monaco.editor.ICodeEditorViewState | null>
   >({})
   const previousFileRef = useRef<string | null>(null)
-  const pendingRevealRef = useRef<{
-    path: string
-    line?: number
-    column?: number
-  } | null>(null)
+  const pendingNavigationRef = useRef<PendingNavigation | null>(null)
+  // Bumped on every navigation request so the apply effect below reruns even
+  // when currentFile doesn't change (e.g. reselecting the active file).
+  const [navTick, setNavTick] = useState(0)
 
   // Refs that the (once-registered) editor opener and reveal callback read so
   // they always see the latest props without re-registering.
@@ -63,38 +82,36 @@ export function useWorkspaceNavigation({
   const currentFileRef = useRef(currentFile)
   currentFileRef.current = currentFile
 
+  const requestNavigation = useCallback((pending: PendingNavigation) => {
+    pendingNavigationRef.current = pending
+    setNavTick((tick) => tick + 1)
+  }, [])
+
+  const selectFile = useCallback(
+    (path: string, line?: number) => {
+      onFileSelectRef.current(path, line)
+      requestNavigation({ path, line })
+    },
+    [requestNavigation],
+  )
+
   const revealLocation = useCallback(
     (path: string, line = 1, column = 1) => {
       const file = filesRef.current.find((candidate) => candidate.path === path)
       if (!file || file.isBinary) return false
 
-      const location = {
+      const clampedLine = Math.max(1, line)
+      requestNavigation({
         path: file.path,
-        line: Math.max(1, line),
+        line: clampedLine,
         column: Math.max(1, column),
-      }
-      pendingRevealRef.current = location
-
+      })
       if (currentFileRef.current !== file.path) {
-        onFileSelectRef.current(file.path, location.line)
-        return true
+        onFileSelectRef.current(file.path, clampedLine)
       }
-
-      const editorInstance = editorRef.current
-      if (!editorInstance) return true
-      editorInstance.revealPositionInCenter({
-        lineNumber: location.line,
-        column: location.column,
-      })
-      editorInstance.setPosition({
-        lineNumber: location.line,
-        column: location.column,
-      })
-      editorInstance.focus()
-      pendingRevealRef.current = null
       return true
     },
-    [editorRef],
+    [requestNavigation],
   )
 
   // Route cross-file "go to definition" through onFileSelect so navigation into
@@ -114,17 +131,18 @@ export function useWorkspaceNavigation({
         if (!file) return false
 
         const line = getLineFromSelection(selectionOrPosition)
-        pendingRevealRef.current = { path: file.path, line }
+        requestNavigation({ path: file.path, line })
         onFileSelectRef.current(file.path, line)
         return true
       },
     })
 
     return () => disposable.dispose()
-  }, [isReady])
+  }, [isReady, requestNavigation])
 
   // Swap the editor's model when the active file changes, preserving per-file
-  // cursor/scroll state and applying any pending go-to-definition reveal.
+  // cursor/scroll state, then apply any pending reveal once the target model
+  // is attached. The sole place that touches the editor for navigation.
   useEffect(() => {
     if (!isReady || !editorReady || !editorRef.current || !currentFile) return
     const editorInstance = editorRef.current
@@ -141,18 +159,17 @@ export function useWorkspaceNavigation({
       previousFileRef.current = currentFile
     }
 
-    const pending = pendingRevealRef.current
-    if (pending && pending.path === currentFile && pending.line) {
-      const position = {
-        lineNumber: pending.line,
-        column: pending.column ?? 1,
-      }
-      editorInstance.revealPositionInCenter(position)
-      editorInstance.setPosition(position)
-      editorInstance.focus()
-      pendingRevealRef.current = null
+    const pending = pendingNavigationRef.current
+    if (
+      pending &&
+      pending.path === currentFile &&
+      model &&
+      editorInstance.getModel() === model
+    ) {
+      revealPosition(editorInstance, pending.line, pending.column)
+      pendingNavigationRef.current = null
     }
-  }, [currentFile, isReady, editorReady, files, editorRef, manager])
+  }, [currentFile, navTick, isReady, editorReady, files, editorRef, manager])
 
   // Called from the editor's onMount so the initial model is attached before
   // the first paint of the mounted editor.
@@ -170,5 +187,5 @@ export function useWorkspaceNavigation({
     [editorRef, manager],
   )
 
-  return { revealLocation, attachEditor }
+  return { revealLocation, selectFile, attachEditor }
 }

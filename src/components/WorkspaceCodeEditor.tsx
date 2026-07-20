@@ -147,7 +147,7 @@ export const WorkspaceCodeEditor = forwardRef<
     isWorkspacePending,
   })
 
-  const { revealLocation, attachEditor } = useWorkspaceNavigation({
+  const { revealLocation, selectFile, attachEditor } = useWorkspaceNavigation({
     isReady,
     editorReady,
     files,
@@ -275,7 +275,7 @@ export const WorkspaceCodeEditor = forwardRef<
         <FileSidebar
           files={files}
           currentFile={currentFile}
-          onFileSelect={onFileSelect}
+          onFileSelect={selectFile}
           onCreateFile={onCreateFile}
           onDeleteFile={onDeleteFile}
           onRenameFile={onRenameFile}
@@ -314,7 +314,7 @@ export const WorkspaceCodeEditor = forwardRef<
               }
               filePath={currentFile}
               files={files}
-              onFileSelect={onFileSelect}
+              onFileSelect={selectFile}
             />
           </div>
         )}
@@ -327,7 +327,7 @@ export const WorkspaceCodeEditor = forwardRef<
         currentFile={currentFile}
         open={quickOpenOpen}
         onOpenChange={setQuickOpenOpen}
-        onFileSelect={onFileSelect}
+        onFileSelect={selectFile}
       />
 
       <WorkspaceSearch
