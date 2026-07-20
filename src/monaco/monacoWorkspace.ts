@@ -77,7 +77,11 @@ export class MonacoWorkspaceModelManager {
   getOrCreateModel(file: WorkspaceFile) {
     const existingModel = this.getModel(file.path)
     if (existingModel) {
-      return this.syncModel(file, existingModel)
+      if (existingModel.isDisposed()) {
+        this.models.delete(file.path)
+      } else {
+        return this.syncModel(file, existingModel)
+      }
     }
 
     const model = monaco.editor.createModel(
