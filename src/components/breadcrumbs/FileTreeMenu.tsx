@@ -1,6 +1,13 @@
 import { Folder } from "lucide-react"
-import type { KeyboardEvent, ReactNode, RefObject } from "react"
-import { useContext, useEffect, useMemo, useRef, useState } from "react"
+import type { KeyboardEvent, ReactNode } from "react"
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { collectFiles, type FileTreeNode } from "../../utils/build-file-tree"
 import { getFileIcon } from "../../utils/icons"
 import { fuzzyMatch } from "../../utils/quickOpen"
@@ -54,7 +61,10 @@ export function FileTreeMenu({
   const [query, setQuery] = useState("")
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
-  const firstItemRef = useRef<HTMLDivElement>(null)
+  const firstItemRef = useRef<HTMLDivElement | null>(null)
+  const setFirstItemRef = useCallback((element: HTMLDivElement | null) => {
+    firstItemRef.current = element
+  }, [])
 
   // Radix focuses the menu content when it opens; grab focus afterwards so
   // the user can type immediately.
@@ -87,7 +97,7 @@ export function FileTreeMenu({
         nodes={nodes}
         currentPath={currentPath}
         onFileSelect={onFileSelect}
-        firstItemRef={firstItemRef}
+        firstItemRef={setFirstItemRef}
       />
     )
   } else if (matches.length === 0) {
@@ -147,7 +157,7 @@ function handleFileMenuKeyDown({
   event: KeyboardEvent<HTMLInputElement>
   matches: FileTreeNode[] | null
   highlightedIndex: number
-  firstItemRef: RefObject<HTMLDivElement | null>
+  firstItemRef: { readonly current: HTMLDivElement | null }
   setSelectedIndex: (index: number) => void
   onFileSelect: (path: string) => void
   closeMenu: () => void
@@ -191,7 +201,7 @@ function FileTreeMenuItems({
   nodes: FileTreeNode[]
   currentPath: string
   onFileSelect: (path: string) => void
-  firstItemRef?: React.RefObject<HTMLDivElement | null>
+  firstItemRef?: (element: HTMLDivElement | null) => void
 }) {
   return (
     <>

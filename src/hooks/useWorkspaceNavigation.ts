@@ -1,6 +1,10 @@
 import * as monaco from "monaco-editor"
-import { type RefObject, useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import type { MonacoWorkspaceModelManager } from "../monaco/monacoWorkspace"
+
+type MutableRef<T> = {
+  current: T
+}
 
 type NavigableFile = {
   path: string
@@ -61,7 +65,7 @@ export function useWorkspaceNavigation({
   files: NavigableFile[]
   currentFile: string | null
   onFileSelect: (path: string, lineNumber?: number) => void
-  editorRef: RefObject<monaco.editor.IStandaloneCodeEditor | null>
+  editorRef: MutableRef<monaco.editor.IStandaloneCodeEditor | null>
   manager: MonacoWorkspaceModelManager
 }) {
   const viewStatesRef = useRef<
