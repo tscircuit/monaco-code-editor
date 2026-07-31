@@ -47,7 +47,7 @@ export function useWorkspaceModelManager({
   }, [manager])
 
   useLayoutEffect(() => {
-    if (!isReady || !enableTypeScriptLanguageService) {
+    if (!isReady) {
       setPreparedWorkspaceKey(null)
       return
     }
@@ -57,6 +57,13 @@ export function useWorkspaceModelManager({
       currentFile,
     )
     manager.syncFiles(orderedFiles)
+
+    // Models power the editor itself and must also exist when the TypeScript
+    // language service is disabled on memory-constrained mobile browsers.
+    if (!enableTypeScriptLanguageService) {
+      setPreparedWorkspaceKey(null)
+      return
+    }
 
     // Keep the active model usable as files stream in, but wait until the
     // workspace settles before initializing the full TypeScript worker graph.
