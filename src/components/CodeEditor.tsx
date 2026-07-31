@@ -11,6 +11,8 @@ import {
 export type CodeEditorProps = {
   className?: string
   defaultValue?: string
+  /** Disable Monaco's memory-heavy TypeScript worker and automatic type acquisition. */
+  enableTypeScriptLanguageService: boolean
   height?: number | string
   language?: string
   loading?: ReactNode
@@ -28,6 +30,7 @@ export type CodeEditorProps = {
 export function CodeEditor({
   className,
   defaultValue = "",
+  enableTypeScriptLanguageService,
   height = "100%",
   language = "typescript",
   loading = "Loading editor...",
@@ -38,11 +41,11 @@ export function CodeEditor({
   value,
   width = "100%",
 }: CodeEditorProps) {
-  const isMonacoReady = useMonacoReady()
+  const isMonacoReady = useMonacoReady(enableTypeScriptLanguageService)
 
   // Types improve diagnostics but must never delay editing the current file.
   useTscircuitTypeAcquisition(value ?? defaultValue, {
-    enabled: isMonacoReady,
+    enabled: isMonacoReady && enableTypeScriptLanguageService,
   })
 
   const handleChange: OnChange = (nextValue, event) => {

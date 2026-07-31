@@ -57,6 +57,8 @@ export type WorkspaceCodeEditorProps = {
   className?: string
   height?: string | number
   options?: monaco.editor.IStandaloneEditorConstructionOptions
+  /** Disable Monaco's memory-heavy TypeScript worker and automatic type acquisition. */
+  enableTypeScriptLanguageService: boolean
 }
 
 /** Commands intended for toolbars and other UI rendered outside the editor. */
@@ -89,10 +91,11 @@ export const WorkspaceCodeEditor = forwardRef<
     className,
     height = "100%",
     options,
+    enableTypeScriptLanguageService,
   },
   forwardedRef,
 ) {
-  const isReady = useMonacoReady()
+  const isReady = useMonacoReady(enableTypeScriptLanguageService)
   const [editorReady, setEditorReady] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const {
@@ -135,7 +138,8 @@ export const WorkspaceCodeEditor = forwardRef<
   // Dependencies and worker preparation improve diagnostics in the background;
   // neither should delay opening the active file.
   useTscircuitTypeAcquisition(workspaceTypeSource, {
-    enabled: isReady && isCodeFile(currentFile),
+    enabled:
+      isReady && enableTypeScriptLanguageService && isCodeFile(currentFile),
     readinessKey: workspaceKey,
   })
 
@@ -145,6 +149,7 @@ export const WorkspaceCodeEditor = forwardRef<
     workspaceKey,
     currentFile,
     isWorkspacePending,
+    enableTypeScriptLanguageService,
   })
 
   const { revealLocation, selectFile, attachEditor } = useWorkspaceNavigation({
@@ -315,6 +320,7 @@ export const WorkspaceCodeEditor = forwardRef<
               filePath={currentFile}
               files={files}
               onFileSelect={selectFile}
+              enableTypeScriptLanguageService={enableTypeScriptLanguageService}
             />
           </div>
         )}

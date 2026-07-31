@@ -6,6 +6,7 @@ type TypeScriptLanguageServiceDefaults = {
   setCompilerOptions(options: monaco.typescript.CompilerOptions): void
   setDiagnosticsOptions(options: Record<string, unknown>): void
   setEagerModelSync?(value: boolean): void
+  setModeConfiguration?(options: Record<string, boolean>): void
 }
 
 type TextSpan = { start: number; length: number }
@@ -57,44 +58,70 @@ export type DocumentSymbol = {
 
 let isConfigured = false
 
+const languageServiceFeatures = [
+  "completionItems",
+  "hovers",
+  "documentSymbols",
+  "definitions",
+  "references",
+  "documentHighlights",
+  "rename",
+  "diagnostics",
+  "documentRangeFormattingEdits",
+  "signatureHelp",
+  "onTypeFormattingEdits",
+  "codeActions",
+  "inlayHints",
+] as const
+
 function getTypeScriptApi() {
   return (
     monaco.languages as typeof monaco.languages & { typescript: TypeScriptApi }
   ).typescript
 }
 
-export function configureMonacoTypeScript() {
-  if (isConfigured) {
-    return
-  }
-
+export function configureMonacoTypeScript(
+  enableTypeScriptLanguageService: boolean,
+) {
   const typescript = getTypeScriptApi()
-  for (const defaults of [
+  const defaultsList = [
     typescript.typescriptDefaults,
     typescript.javascriptDefaults,
-  ]) {
-    defaults.setCompilerOptions(
-      getWorkspaceCompilerOptions({
-        compilerOptions: defaults.getCompilerOptions(),
-        jsxEmit: typescript.JsxEmit.ReactJSX,
-        moduleKind: typescript.ModuleKind.ESNext,
-        moduleResolutionKind:
-          typescript.ModuleResolutionKind.Bundler ??
-          typescript.ModuleResolutionKind.NodeJs,
-        scriptTarget: typescript.ScriptTarget.ES2022,
-      }),
-    )
+  ]
 
-    defaults.setEagerModelSync?.(true)
+  if (!isConfigured) {
+    for (const defaults of defaultsList) {
+      defaults.setCompilerOptions(
+        getWorkspaceCompilerOptions({
+          compilerOptions: defaults.getCompilerOptions(),
+          jsxEmit: typescript.JsxEmit.ReactJSX,
+          moduleKind: typescript.ModuleKind.ESNext,
+          moduleResolutionKind:
+            typescript.ModuleResolutionKind.Bundler ??
+            typescript.ModuleResolutionKind.NodeJs,
+          scriptTarget: typescript.ScriptTarget.ES2022,
+        }),
+      )
+    }
+    isConfigured = true
   }
 
-  typescript.typescriptDefaults.setDiagnosticsOptions({
-    noSemanticValidation: false,
-    noSyntaxValidation: false,
-    onlyVisible: false,
-  })
+  const modeConfiguration = Object.fromEntries(
+    languageServiceFeatures.map((feature) => [
+      feature,
+      enableTypeScriptLanguageService,
+    ]),
+  )
 
-  isConfigured = true
+  for (const defaults of defaultsList) {
+    defaults.setEagerModelSync?.(enableTypeScriptLanguageService)
+    defaults.setModeConfiguration?.(modeConfiguration)
+    defaults.setDiagnosticsOptions({
+      noSemanticValidation: !enableTypeScriptLanguageService,
+      noSyntaxValidation: !enableTypeScriptLanguageService,
+      onlyVisible: !enableTypeScriptLanguageService,
+    })
+  }
 }
 
 /** Wait until Monaco's TypeScript worker has synchronized the workspace graph. */

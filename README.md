@@ -39,6 +39,7 @@ export function EditorPanel() {
       </div>
 
       <WorkspaceCodeEditor
+        enableTypeScriptLanguageService={true}
         ref={editorRef}
         files={files}
         currentFile={currentFile}

@@ -4,6 +4,7 @@ import { CodeEditor } from "../src/components/CodeEditor"
 export default (
   <div className="h-screen bg-slate-900 p-4">
     <CodeEditor
+      enableTypeScriptLanguageService={true}
       defaultValue={`import { RedLed } from "@tsci/seveibar.red-led"
 import { PushButton } from "@tsci/seveibar.push-button"
 import { SmdUsbC } from "@tsci/seveibar.smd-usb-c"

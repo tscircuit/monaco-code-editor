@@ -22,12 +22,14 @@ export function useWorkspaceModelManager({
   workspaceKey,
   currentFile,
   isWorkspacePending,
+  enableTypeScriptLanguageService,
 }: {
   isReady: boolean
   workspaceFiles: WorkspaceFile[]
   workspaceKey: string
   currentFile: string | null
   isWorkspacePending: boolean
+  enableTypeScriptLanguageService: boolean
 }): MonacoWorkspaceModelManager {
   const managerRef = useRef<MonacoWorkspaceModelManager | null>(null)
   if (!managerRef.current) {
@@ -45,7 +47,7 @@ export function useWorkspaceModelManager({
   }, [manager])
 
   useLayoutEffect(() => {
-    if (!isReady) {
+    if (!isReady || !enableTypeScriptLanguageService) {
       setPreparedWorkspaceKey(null)
       return
     }
@@ -84,6 +86,7 @@ export function useWorkspaceModelManager({
     }
   }, [
     isReady,
+    enableTypeScriptLanguageService,
     isWorkspacePending,
     workspaceFiles,
     workspaceKey,

@@ -19,6 +19,7 @@ export type BreadcrumbsProps = {
   filePath: string | null
   files?: { path: string }[]
   onFileSelect?: (path: string) => void
+  enableTypeScriptLanguageService?: boolean
 }
 
 export function Breadcrumbs({
@@ -27,6 +28,7 @@ export function Breadcrumbs({
   filePath,
   files,
   onFileSelect,
+  enableTypeScriptLanguageService = true,
 }: BreadcrumbsProps) {
   // Only code files have a TypeScript outline; other files (md, json, …)
   // still get file-path breadcrumbs.
@@ -35,7 +37,7 @@ export function Breadcrumbs({
   const { symbols, symbolPath } = useDocumentSymbols({
     editor,
     model,
-    enabled: hasSymbolOutline,
+    enabled: hasSymbolOutline && enableTypeScriptLanguageService,
   })
 
   const visiblePaths = useMemo(

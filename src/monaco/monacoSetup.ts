@@ -26,19 +26,22 @@ export function registerTsciPackageLinkProvider(): void {
 }
 
 /** Configure the parts Monaco needs before an editor can be mounted. */
-export function configureMonaco() {
-  if (isMonacoBaseConfigured) return
-  configureMonacoTypeScript()
-  registerTsciPackageLinkProvider()
-  isMonacoBaseConfigured = true
+export function configureMonaco(enableTypeScriptLanguageService: boolean) {
+  configureMonacoTypeScript(enableTypeScriptLanguageService)
+  if (!isMonacoBaseConfigured) {
+    registerTsciPackageLinkProvider()
+    isMonacoBaseConfigured = true
+  }
 }
 
 /**
  * Install optional Shiki tokenization in the background. Monaco's native
  * tokenization remains available while this promise resolves.
  */
-export const ensureMonacoConfigured = () => {
-  configureMonaco()
+export const ensureMonacoConfigured = (
+  enableTypeScriptLanguageService: boolean,
+) => {
+  configureMonaco(enableTypeScriptLanguageService)
   if (monacoSetupPromise) return monacoSetupPromise
 
   monacoSetupPromise = createHighlighter({

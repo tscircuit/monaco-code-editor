@@ -54,7 +54,10 @@ export default function TscircuitWorkspaceWithRunframeFixture() {
     <div className="h-screen bg-white">
       <div className="flex h-full flex-col md:flex-row">
         <div className="min-h-0 flex-1 border-b border-slate-200 md:border-r md:border-b-0">
-          <WorkspaceCodeEditor {...workspace} />
+          <WorkspaceCodeEditor
+            enableTypeScriptLanguageService={true}
+            {...workspace}
+          />
         </div>
         <div className="min-h-0 flex flex-1 flex-col">
           <div className="h-full flex-1">

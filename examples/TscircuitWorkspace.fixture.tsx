@@ -140,7 +140,11 @@ export default function TscircuitWorkspaceFixture() {
         </button>
       </div>
       <div className="min-h-0 flex-1">
-        <WorkspaceCodeEditor ref={editorRef} {...workspace} />
+        <WorkspaceCodeEditor
+          ref={editorRef}
+          enableTypeScriptLanguageService={true}
+          {...workspace}
+        />
       </div>
     </div>
   )
