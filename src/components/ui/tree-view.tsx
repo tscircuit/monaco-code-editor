@@ -1,21 +1,15 @@
-import * as React from "react"
-import { cva } from "class-variance-authority"
 import { ChevronRight } from "lucide-react"
 import { Accordion as AccordionPrimitive } from "radix-ui"
+import * as React from "react"
 import { cn } from "../../lib/utils"
 import { Input } from "./input"
 
-const treeVariants = cva(
-  "group rounded-md hover:bg-slate-200/70 transition-colors duration-100 dark:hover:bg-slate-700/50",
-)
-
-const selectedTreeVariants = cva(
-  "bg-slate-200 text-slate-900 font-medium dark:bg-slate-700 dark:text-slate-50",
-)
-
-const dragOverVariants = cva(
-  "bg-slate-300 text-slate-900 dark:bg-slate-600 dark:text-slate-50",
-)
+const treeClassName =
+  "group rounded-md hover:bg-slate-200/70 transition-colors duration-100 dark:hover:bg-slate-700/50"
+const selectedTreeClassName =
+  "bg-slate-200 text-slate-900 font-medium dark:bg-slate-700 dark:text-slate-50"
+const dragOverClassName =
+  "bg-slate-300 text-slate-900 dark:bg-slate-600 dark:text-slate-50"
 
 interface TreeDataItem {
   id: string
@@ -33,6 +27,93 @@ interface TreeDataItem {
   onRename?: (newName: string) => void
   onCancelRename?: () => void
   onContextMenu?: (e: React.MouseEvent) => void
+}
+
+function RenameInput({ item }: { item: TreeDataItem }) {
+  const finishRename = (input: HTMLInputElement) => {
+    const value = input.value.trim()
+    if (value && value !== item.name) {
+      item.onRename?.(value)
+    } else {
+      item.onCancelRename?.()
+    }
+  }
+
+  return (
+    <Input
+      style={{ zIndex: 50 }}
+      defaultValue={item.name as string}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault()
+          finishRename(event.currentTarget)
+        } else if (event.key === "Escape") {
+          event.preventDefault()
+          item.onCancelRename?.()
+        }
+      }}
+      spellCheck={false}
+      autoComplete="off"
+      onBlur={(event) => finishRename(event.currentTarget)}
+      autoFocus
+      onClick={(event) => event.stopPropagation()}
+      className="h-6 w-full rounded-sm border border-blue-500 bg-white px-2 py-0 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+      onFocus={(event) => {
+        event.currentTarget.select()
+        const lastDotIndex = event.currentTarget.value.lastIndexOf(".")
+        if (lastDotIndex > 0) {
+          event.currentTarget.setSelectionRange(0, lastDotIndex)
+        }
+      }}
+    />
+  )
+}
+
+function useTreeItemDrag({
+  item,
+  draggedItem,
+  handleDragStart,
+  handleDrop,
+}: {
+  item: TreeDataItem
+  draggedItem: TreeDataItem | null
+  handleDragStart?: (item: TreeDataItem) => void
+  handleDrop?: (item: TreeDataItem) => void
+}) {
+  const [isDragOver, setIsDragOver] = React.useState(false)
+
+  return {
+    isDragOver,
+    dragProps: {
+      draggable: !!item.draggable,
+      onDragStart(event: React.DragEvent) {
+        if (!item.draggable) {
+          event.preventDefault()
+          return
+        }
+        event.dataTransfer.setData("text/plain", item.id)
+        handleDragStart?.(item)
+      },
+      onDragOver(event: React.DragEvent) {
+        if (
+          item.droppable !== false &&
+          draggedItem &&
+          draggedItem.id !== item.id
+        ) {
+          event.preventDefault()
+          setIsDragOver(true)
+        }
+      },
+      onDragLeave() {
+        setIsDragOver(false)
+      },
+      onDrop(event: React.DragEvent) {
+        event.preventDefault()
+        setIsDragOver(false)
+        handleDrop?.(item)
+      },
+    },
+  }
 }
 
 type TreeProps = React.HTMLAttributes<HTMLDivElement> & {
@@ -107,7 +188,7 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
         items: TreeDataItem[] | TreeDataItem,
         targetId: string,
       ) {
-        if (items instanceof Array) {
+        if (Array.isArray(items)) {
           for (let i = 0; i < items.length; i++) {
             ids.push(items[i]!.id)
             if (walkTreeItems(items[i]!, targetId) && !expandAll) {
@@ -147,7 +228,7 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
           onDrop={() => {
             handleDrop({ id: "", name: "parent_div" })
           }}
-        ></div>
+        />
       </div>
     )
   },
@@ -184,7 +265,7 @@ const TreeItem = React.forwardRef<HTMLDivElement, TreeItemProps>(
     },
     ref,
   ) => {
-    if (!(data instanceof Array)) {
+    if (!Array.isArray(data)) {
       data = [data]
     }
 
@@ -261,33 +342,12 @@ const TreeNode = ({
   const [value, setValue] = React.useState(
     expandedItemIds.includes(item.id) ? [item.id] : [],
   )
-  const [isDragOver, setIsDragOver] = React.useState(false)
-
-  const onDragStart = (e: React.DragEvent) => {
-    if (!item.draggable) {
-      e.preventDefault()
-      return
-    }
-    e.dataTransfer.setData("text/plain", item.id)
-    handleDragStart?.(item)
-  }
-
-  const onDragOver = (e: React.DragEvent) => {
-    if (item.droppable !== false && draggedItem && draggedItem.id !== item.id) {
-      e.preventDefault()
-      setIsDragOver(true)
-    }
-  }
-
-  const onDragLeave = () => {
-    setIsDragOver(false)
-  }
-
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(false)
-    handleDrop?.(item)
-  }
+  const { isDragOver, dragProps } = useTreeItemDrag({
+    item,
+    draggedItem,
+    handleDragStart,
+    handleDrop,
+  })
 
   return (
     <AccordionPrimitive.Root
@@ -298,20 +358,16 @@ const TreeNode = ({
       <AccordionPrimitive.Item value={item.id}>
         <AccordionTrigger
           className={cn(
-            treeVariants(),
-            selectedItemId === item.id && selectedTreeVariants(),
-            isDragOver && dragOverVariants(),
+            treeClassName,
+            selectedItemId === item.id && selectedTreeClassName,
+            isDragOver && dragOverClassName,
           )}
           onClick={() => {
             handleSelectChange(item)
             item.onClick?.()
           }}
           onContextMenu={item.onContextMenu}
-          draggable={!!item.draggable}
-          onDragStart={onDragStart}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onDrop={onDrop}
+          {...dragProps}
         >
           <TreeIcon
             item={item}
@@ -321,48 +377,7 @@ const TreeNode = ({
           />
           <div className="min-w-0 flex-1">
             {item.isRenaming ? (
-              <Input
-                style={{
-                  zIndex: 50,
-                }}
-                defaultValue={item.name as string}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault()
-                    const value = e.currentTarget.value.trim()
-                    if (value && value !== item.name) {
-                      item.onRename?.(value)
-                    } else {
-                      item.onCancelRename?.()
-                    }
-                  } else if (e.key === "Escape") {
-                    e.preventDefault()
-                    item.onCancelRename?.()
-                  }
-                }}
-                spellCheck={false}
-                autoComplete="off"
-                onBlur={(e) => {
-                  const value = e.currentTarget.value.trim()
-                  if (value && value !== item.name) {
-                    item.onRename?.(value)
-                  } else {
-                    item.onCancelRename?.()
-                  }
-                }}
-                autoFocus
-                onClick={(e) => e.stopPropagation()}
-                className="h-6 w-full rounded-sm border border-blue-500 bg-white px-2 py-0 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                onFocus={(e) => {
-                  e.currentTarget.select()
-                  // Select filename without extension
-                  const filename = e.currentTarget.value
-                  const lastDotIndex = filename.lastIndexOf(".")
-                  if (lastDotIndex > 0) {
-                    e.currentTarget.setSelectionRange(0, lastDotIndex)
-                  }
-                }}
-              />
+              <RenameInput item={item} />
             ) : (
               <span className="block truncate text-sm">{item.name}</span>
             )}
@@ -371,12 +386,12 @@ const TreeNode = ({
             className="flex items-center"
             onClick={(e) => e.stopPropagation()}
           >
-            <TreeActions isSelected={true}>{item.actions}</TreeActions>
+            <TreeActions>{item.actions}</TreeActions>
           </div>
         </AccordionTrigger>
         <AccordionContent className="ml-4 pl-1 border-l">
           <TreeItem
-            data={item.children ? item.children : item}
+            data={item.children ?? item}
             selectedItemId={selectedItemId}
             setSelectedItemId={setSelectedItemId}
             handleSelectChange={handleSelectChange}
@@ -419,58 +434,29 @@ const TreeLeaf = React.forwardRef<
     },
     ref,
   ) => {
-    const [isDragOver, setIsDragOver] = React.useState(false)
-
-    const onDragStart = (e: React.DragEvent) => {
-      if (!item.draggable) {
-        e.preventDefault()
-        return
-      }
-      e.dataTransfer.setData("text/plain", item.id)
-      handleDragStart?.(item)
-    }
-
-    const onDragOver = (e: React.DragEvent) => {
-      if (
-        item.droppable !== false &&
-        draggedItem &&
-        draggedItem.id !== item.id
-      ) {
-        e.preventDefault()
-        setIsDragOver(true)
-      }
-    }
-
-    const onDragLeave = () => {
-      setIsDragOver(false)
-    }
-
-    const onDrop = (e: React.DragEvent) => {
-      e.preventDefault()
-      setIsDragOver(false)
-      handleDrop?.(item)
-    }
+    const { isDragOver, dragProps } = useTreeItemDrag({
+      item,
+      draggedItem,
+      handleDragStart,
+      handleDrop,
+    })
 
     return (
       <div
         ref={ref}
         className={cn(
           "ml-[2px] flex cursor-pointer items-center py-2 pl-2 pr-8 text-left",
-          treeVariants(),
+          treeClassName,
           className,
-          selectedItemId === item.id && selectedTreeVariants(),
-          isDragOver && dragOverVariants(),
+          selectedItemId === item.id && selectedTreeClassName,
+          isDragOver && dragOverClassName,
         )}
         onClick={() => {
           handleSelectChange(item)
           item.onClick?.()
         }}
         onContextMenu={item.onContextMenu}
-        draggable={!!item.draggable}
-        onDragStart={onDragStart}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
+        {...dragProps}
         {...props}
       >
         <TreeIcon
@@ -480,54 +466,13 @@ const TreeLeaf = React.forwardRef<
         />
         <div className="min-w-0 flex-1">
           {item.isRenaming ? (
-            <Input
-              style={{
-                zIndex: 50,
-              }}
-              defaultValue={item.name as string}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault()
-                  const value = e.currentTarget.value.trim()
-                  if (value && value !== item.name) {
-                    item.onRename?.(value)
-                  } else {
-                    item.onCancelRename?.()
-                  }
-                } else if (e.key === "Escape") {
-                  e.preventDefault()
-                  item.onCancelRename?.()
-                }
-              }}
-              spellCheck={false}
-              autoComplete="off"
-              onBlur={(e) => {
-                const value = e.currentTarget.value.trim()
-                if (value && value !== item.name) {
-                  item.onRename?.(value)
-                } else {
-                  item.onCancelRename?.()
-                }
-              }}
-              autoFocus
-              onClick={(e) => e.stopPropagation()}
-              className="h-6 w-full rounded-sm border border-blue-500 bg-white px-2 py-0 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              onFocus={(e) => {
-                e.currentTarget.select()
-                // Select filename without extension
-                const filename = e.currentTarget.value
-                const lastDotIndex = filename.lastIndexOf(".")
-                if (lastDotIndex > 0) {
-                  e.currentTarget.setSelectionRange(0, lastDotIndex)
-                }
-              }}
-            />
+            <RenameInput item={item} />
           ) : (
             <span className="block truncate text-sm">{item.name}</span>
           )}
         </div>
         <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-          <TreeActions isSelected={true}>{item.actions}</TreeActions>
+          <TreeActions>{item.actions}</TreeActions>
         </div>
       </div>
     )
@@ -593,28 +538,13 @@ const TreeIcon = ({
   }
   return Icon ? (
     <Icon className={cn("h-4 w-4 shrink-0 mr-2", item.iconClassName)} />
-  ) : (
-    <></>
-  )
+  ) : null
 }
 
-const TreeActions = ({
-  children,
-  isSelected,
-}: {
-  children: React.ReactNode
-  isSelected: boolean
-}) => {
+const TreeActions = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div
-      className={cn(
-        isSelected ? "block" : "hidden",
-        "absolute right-3 group-hover:block",
-      )}
-    >
-      {children}
-    </div>
+    <div className="absolute right-3 block group-hover:block">{children}</div>
   )
 }
 
-export { TreeView, type TreeDataItem }
+export { type TreeDataItem, TreeView }
