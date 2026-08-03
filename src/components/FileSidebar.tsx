@@ -59,8 +59,9 @@ export function FileSidebar({
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
 
   const selectedItemId = currentFile ?? ""
+  const showLoadingFiles = isLoadingFiles && files.length > 0
   const canModifyFiles =
-    Boolean(onRenameFile && onDeleteFile) && !isLoadingFiles
+    Boolean(onRenameFile && onDeleteFile) && !showLoadingFiles
   const currentFolderPath = getCurrentFolderPath(
     selectedFolderForCreation,
     selectedItemId,
@@ -166,7 +167,7 @@ export function FileSidebar({
           <PanelRightOpen />
         </button>
         <div className="flex items-center gap-2">
-          {isLoadingFiles && (
+          {showLoadingFiles && (
             <div className="flex items-center gap-1">
               <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
               {loadingProgress && (

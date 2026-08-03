@@ -63,9 +63,6 @@ export function useWorkspaceFiles({
     if (!files.some((file) => file.path === path)) {
       throw new Error(`File "${path}" does not exist`)
     }
-    if (files.length <= 1) {
-      throw new Error("Cannot delete the last file")
-    }
     const fallback = files.find((file) => file.path !== path)?.path ?? null
     setFiles((prev) => prev.filter((file) => file.path !== path))
     setCurrentFile((current) => (current === path ? fallback : current))
