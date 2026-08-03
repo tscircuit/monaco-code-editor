@@ -1,4 +1,4 @@
-import { Loader2, PanelRightClose, PanelRightOpen, Plus } from "lucide-react"
+import { FilePlus2, Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { useMemo, useState } from "react"
 import { cn } from "../lib/utils"
 import {
@@ -28,6 +28,16 @@ export type FileSidebarProps = {
 
 const noopRename = () => {}
 const noopDelete = () => {}
+const DEFAULT_WIDTH = 224
+const MIN_WIDTH = 160
+const MAX_WIDTH = 480
+const COLLAPSE_AT = 120
+const headerButtonClassName =
+  "grid h-6 w-6 place-items-center rounded text-slate-500 outline-none hover:bg-slate-200/70 hover:text-slate-800 focus-visible:ring-1 focus-visible:ring-slate-400"
+
+function clampWidth(width: number) {
+  return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, width))
+}
 
 export function FileSidebar({
   files,
@@ -43,6 +53,8 @@ export function FileSidebar({
   className,
 }: FileSidebarProps) {
   const [internalOpen, setInternalOpen] = useState(true)
+  const [width, setWidth] = useState(DEFAULT_WIDTH)
+  const [resizeOrigin, setResizeOrigin] = useState<number | null>(null)
   const sidebarOpen = open ?? internalOpen
   const setSidebarOpen = (next: boolean) => {
     onOpenChange?.(next)
@@ -123,6 +135,42 @@ export function FileSidebar({
     handleCreateFileInline()
   }
 
+  const handleResizeKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return
+    event.preventDefault()
+
+    if (event.key === "ArrowLeft" && width === MIN_WIDTH) {
+      setSidebarOpen(false)
+      return
+    }
+
+    const direction = event.key === "ArrowLeft" ? -1 : 1
+    const step = event.shiftKey ? 32 : 8
+    setWidth((current) => clampWidth(current + direction * step))
+  }
+
+  const handleResizePointerDown = (event: React.PointerEvent) => {
+    if (event.button !== 0) return
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    const left = event.currentTarget.parentElement?.getBoundingClientRect().left
+    if (left !== undefined) setResizeOrigin(left)
+  }
+
+  const handleResizePointerMove = (event: React.PointerEvent) => {
+    if (resizeOrigin === null) return
+    event.preventDefault()
+    const nextWidth = event.clientX - resizeOrigin
+
+    if (nextWidth <= COLLAPSE_AT) {
+      setResizeOrigin(null)
+      setSidebarOpen(false)
+    } else {
+      setWidth(clampWidth(nextWidth))
+    }
+  }
+  const stopResizing = () => setResizeOrigin(null)
+
   const isControlled = open !== undefined
 
   if (!sidebarOpen && !isControlled) {
@@ -139,7 +187,7 @@ export function FileSidebar({
           aria-label="Show files"
           className="text-gray-400 hover:text-gray-600"
         >
-          <PanelRightClose />
+          <PanelLeftOpen className="h-4 w-4" />
         </button>
       </div>
     )
@@ -148,13 +196,15 @@ export function FileSidebar({
   return (
     <div
       className={cn(
-        "relative h-full shrink-0 border-r border-slate-200 bg-slate-50 transition-all duration-300",
+        "relative flex h-full shrink-0 flex-col border-r border-slate-200 bg-slate-50",
+        resizeOrigin === null &&
+          "transition-[width] duration-150 ease-out motion-reduce:transition-none",
         !sidebarOpen && "w-0 overflow-hidden border-r-0",
-        sidebarOpen && "w-56",
         className,
       )}
+      style={{ width: sidebarOpen ? width : 0 }}
     >
-      <div className="flex h-10 items-center justify-between border-b border-slate-200 px-2">
+      <div className="flex h-10 shrink-0 items-center justify-between border-b border-slate-200 px-2">
         <button
           onClick={() => {
             setSidebarOpen(false)
@@ -162,11 +212,11 @@ export function FileSidebar({
           }}
           title="Hide files"
           aria-label="Hide files"
-          className="scale-90 text-gray-400 transition-opacity duration-200"
+          className={headerButtonClassName}
         >
-          <PanelRightOpen />
+          <PanelLeftClose className="h-4 w-4" />
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {showLoadingFiles && (
             <div className="flex items-center gap-1">
               <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
@@ -182,9 +232,9 @@ export function FileSidebar({
               onClick={() => setIsCreatingFile(true)}
               aria-label="Create new file"
               title="New file"
-              className="text-gray-400 hover:text-gray-600"
+              className={headerButtonClassName}
             >
-              <Plus className="h-5 w-5 shrink-0" />
+              <FilePlus2 className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -250,6 +300,31 @@ export function FileSidebar({
           </div>
         )}
       </div>
+
+      {sidebarOpen && (
+        <div
+          role="separator"
+          aria-label="Resize explorer"
+          aria-orientation="vertical"
+          aria-valuemin={MIN_WIDTH}
+          aria-valuemax={MAX_WIDTH}
+          aria-valuenow={width}
+          tabIndex={0}
+          className={cn(
+            "absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize touch-none outline-none",
+            "after:absolute after:inset-y-0 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:bg-transparent after:transition-colors",
+            "hover:after:bg-blue-500 focus-visible:after:bg-blue-500",
+            resizeOrigin !== null && "after:bg-blue-500",
+          )}
+          onDoubleClick={() => setWidth(DEFAULT_WIDTH)}
+          onKeyDown={handleResizeKeyDown}
+          onPointerDown={handleResizePointerDown}
+          onPointerMove={handleResizePointerMove}
+          onPointerUp={stopResizing}
+          onPointerCancel={stopResizing}
+          title="Drag to resize. Double-click to reset."
+        />
+      )}
     </div>
   )
 }

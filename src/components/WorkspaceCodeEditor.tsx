@@ -1,5 +1,5 @@
 import Editor, { type OnChange, type OnMount } from "@monaco-editor/react"
-import { PanelRightClose } from "lucide-react"
+import { PanelLeftOpen } from "lucide-react"
 import type * as monaco from "monaco-editor"
 import {
   forwardRef,
@@ -306,7 +306,7 @@ export const WorkspaceCodeEditor = forwardRef<
                 aria-label="Show files"
               >
                 <div className="flex h-6 w-6 items-center justify-center">
-                  <PanelRightClose />
+                  <PanelLeftOpen />
                 </div>
               </button>
             )}
