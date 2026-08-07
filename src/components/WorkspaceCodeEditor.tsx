@@ -19,8 +19,8 @@ import {
   defaultCodeEditorOptions,
   defaultEditorTheme,
 } from "../monaco/editorDefaults"
-import { isCodeFile } from "../monaco/monacoTypeScript"
 import {
+  getWorkspaceCodeFileSetKey,
   getWorkspaceFileSetKey,
   getWorkspaceTypeAcquisitionSource,
   isWorkspaceLoadPending,
@@ -32,6 +32,7 @@ import {
 import { Breadcrumbs } from "./Breadcrumbs"
 import { FileSidebar } from "./FileSidebar"
 import { QuickOpen } from "./QuickOpen"
+import { TypeAcquisitionStatus } from "./TypeAcquisitionStatus"
 import { WorkspaceSearch } from "./WorkspaceSearch"
 
 export type EditorFile = {
@@ -135,12 +136,17 @@ export const WorkspaceCodeEditor = forwardRef<
     () => getWorkspaceTypeAcquisitionSource(workspaceFiles),
     [workspaceFiles],
   )
-  // Dependencies and worker preparation improve diagnostics in the background;
-  // neither should delay opening the active file.
+  const typeAcquisitionKey = useMemo(
+    () => getWorkspaceCodeFileSetKey(workspaceFiles),
+    [workspaceFiles],
+  )
+  // Gate on the workspace, not on the open file: opening a README mid-download
+  // must not un-hide the errors the acquisition is about to resolve.
+  const isAcquiringTypesEnabled =
+    isReady && enableTypeScriptLanguageService && workspaceTypeSource !== ""
   useTscircuitTypeAcquisition(workspaceTypeSource, {
-    enabled:
-      isReady && enableTypeScriptLanguageService && isCodeFile(currentFile),
-    readinessKey: workspaceKey,
+    enabled: isAcquiringTypesEnabled,
+    readinessKey: typeAcquisitionKey,
   })
 
   const manager = useWorkspaceModelManager({
@@ -322,6 +328,7 @@ export const WorkspaceCodeEditor = forwardRef<
               onFileSelect={selectFile}
               enableTypeScriptLanguageService={enableTypeScriptLanguageService}
             />
+            <TypeAcquisitionStatus enabled={isAcquiringTypesEnabled} />
           </div>
         )}
 

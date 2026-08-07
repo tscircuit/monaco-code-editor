@@ -2,6 +2,7 @@ import { setupTypeAcquisition } from "@typescript/ata"
 import * as monaco from "monaco-editor"
 import ts from "typescript"
 import { createTsciPackageFetcher } from "./tsciPackageSupport"
+import { createTypeAcquisitionProgressStore } from "./typeAcquisitionProgress"
 
 type TypeScriptLanguageServiceDefaults = {
   addExtraLib(content: string, filePath?: string): monaco.IDisposable
@@ -18,6 +19,12 @@ const typeAcquisitionState = {
   disposables: new Map<string, monaco.IDisposable>(),
   registryApiUrl: undefined as string | undefined,
 }
+
+const progressStore = createTypeAcquisitionProgressStore()
+
+/** `useSyncExternalStore` pair for rendering download progress. */
+export const subscribeToTypeAcquisitionProgress = progressStore.subscribe
+export const getTypeAcquisitionProgress = progressStore.getSnapshot
 
 export type TscircuitTypeAcquisitionOptions = {
   /** Base URL of the registry API used to resolve `@tsci/*` packages. */
@@ -60,6 +67,11 @@ function ensureTypeAcquisition() {
       errorMessage(message, error) {
         console.warn(message, error)
       },
+      // Only fires when there are files left to fetch, so a fully cached
+      // workspace never shows a spinner.
+      started: progressStore.reportStarted,
+      progress: progressStore.reportProgress,
+      finished: progressStore.reportFinished,
       receivedFile(code, path) {
         const extraLibPath = toExtraLibPath(path)
         typeAcquisitionState.disposables.get(extraLibPath)?.dispose()
@@ -78,5 +90,7 @@ function ensureTypeAcquisition() {
 
 export function acquireTscircuitTypes(source: string) {
   const acquireTypes = ensureTypeAcquisition()
-  return acquireTypes(`${tscircuitBootstrapSource}\n${source}`)
+  return progressStore.track(
+    acquireTypes(`${tscircuitBootstrapSource}\n${source}`),
+  )
 }

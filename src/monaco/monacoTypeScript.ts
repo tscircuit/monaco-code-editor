@@ -1,9 +1,11 @@
 import * as monaco from "monaco-editor"
+import { createDiagnosticsController } from "./diagnosticsSuspension"
 import { getWorkspaceCompilerOptions } from "./getWorkspaceCompilerOptions"
 
 type TypeScriptLanguageServiceDefaults = {
   getCompilerOptions(): monaco.typescript.CompilerOptions
   setCompilerOptions(options: monaco.typescript.CompilerOptions): void
+  getDiagnosticsOptions(): Record<string, unknown>
   setDiagnosticsOptions(options: Record<string, unknown>): void
   setEagerModelSync?(value: boolean): void
   setModeConfiguration?(options: Record<string, boolean>): void
@@ -80,14 +82,31 @@ function getTypeScriptApi() {
   ).typescript
 }
 
+function getLanguageServiceDefaults() {
+  const typescript = getTypeScriptApi()
+  return [typescript.typescriptDefaults, typescript.javascriptDefaults]
+}
+
+const diagnosticsController = createDiagnosticsController((options) => {
+  for (const defaults of getLanguageServiceDefaults()) {
+    // Monaco replaces the whole options object, so anything a consumer set
+    // (noSuggestionDiagnostics, diagnosticCodesToIgnore) has to be carried
+    // forward or suspending would silently drop it.
+    defaults.setDiagnosticsOptions({
+      ...defaults.getDiagnosticsOptions(),
+      ...options,
+    })
+  }
+})
+
+export const suspendSemanticDiagnostics =
+  diagnosticsController.suspendSemanticDiagnostics
+
 export function configureMonacoTypeScript(
   enableTypeScriptLanguageService: boolean,
 ) {
   const typescript = getTypeScriptApi()
-  const defaultsList = [
-    typescript.typescriptDefaults,
-    typescript.javascriptDefaults,
-  ]
+  const defaultsList = getLanguageServiceDefaults()
 
   if (!isConfigured) {
     for (const defaults of defaultsList) {
@@ -116,12 +135,11 @@ export function configureMonacoTypeScript(
   for (const defaults of defaultsList) {
     defaults.setEagerModelSync?.(enableTypeScriptLanguageService)
     defaults.setModeConfiguration?.(modeConfiguration)
-    defaults.setDiagnosticsOptions({
-      noSemanticValidation: !enableTypeScriptLanguageService,
-      noSyntaxValidation: !enableTypeScriptLanguageService,
-      onlyVisible: !enableTypeScriptLanguageService,
-    })
   }
+
+  diagnosticsController.setLanguageServiceEnabled(
+    enableTypeScriptLanguageService,
+  )
 }
 
 /** Wait until Monaco's TypeScript worker has synchronized the workspace graph. */
