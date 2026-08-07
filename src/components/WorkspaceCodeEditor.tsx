@@ -16,7 +16,7 @@ import { useWorkspaceModelManager } from "../hooks/useWorkspaceModelManager"
 import { useWorkspaceNavigation } from "../hooks/useWorkspaceNavigation"
 import { useWorkspacePalettes } from "../hooks/useWorkspacePalettes"
 import {
-  defaultCodeEditorOptions,
+  createCodeEditorOptions,
   defaultEditorTheme,
 } from "../monaco/editorDefaults"
 import { isCodeFile } from "../monaco/monacoTypeScript"
@@ -32,6 +32,7 @@ import {
 import { Breadcrumbs } from "./Breadcrumbs"
 import { FileSidebar } from "./FileSidebar"
 import { QuickOpen } from "./QuickOpen"
+import { TypeAcquisitionStatus } from "./TypeAcquisitionStatus"
 import { WorkspaceSearch } from "./WorkspaceSearch"
 
 export type EditorFile = {
@@ -135,13 +136,15 @@ export const WorkspaceCodeEditor = forwardRef<
     () => getWorkspaceTypeAcquisitionSource(workspaceFiles),
     [workspaceFiles],
   )
+  const isTypeAcquisitionEnabled =
+    isReady && enableTypeScriptLanguageService && isCodeFile(currentFile)
   // Dependencies and worker preparation improve diagnostics in the background;
   // neither should delay opening the active file.
-  useTscircuitTypeAcquisition(workspaceTypeSource, {
-    enabled:
-      isReady && enableTypeScriptLanguageService && isCodeFile(currentFile),
+  const areTypesReady = useTscircuitTypeAcquisition(workspaceTypeSource, {
+    enabled: isTypeAcquisitionEnabled,
     readinessKey: workspaceKey,
   })
+  const isLoadingTypes = isTypeAcquisitionEnabled && !areTypesReady
 
   const manager = useWorkspaceModelManager({
     isReady,
@@ -164,12 +167,17 @@ export const WorkspaceCodeEditor = forwardRef<
 
   const editorOptions =
     useMemo<monaco.editor.IStandaloneEditorConstructionOptions>(
-      () => ({
-        ...defaultCodeEditorOptions,
-        readOnly,
-        ...options,
-      }),
-      [readOnly, options],
+      () =>
+        createCodeEditorOptions(
+          {
+            readOnly,
+            ...options,
+          },
+          {
+            suppressValidationDecorations: isWorkspacePending || isLoadingTypes,
+          },
+        ),
+      [readOnly, options, isWorkspacePending, isLoadingTypes],
     )
 
   const replaceWorkspaceMatches = useCallback(
@@ -325,7 +333,13 @@ export const WorkspaceCodeEditor = forwardRef<
           </div>
         )}
 
-        <div className="relative min-h-0 flex-1">{editorBody}</div>
+        <div className="relative min-h-0 flex-1">
+          {editorBody}
+          <TypeAcquisitionStatus
+            className="pointer-events-none absolute right-3 bottom-3 z-10"
+            isPending={isLoadingTypes}
+          />
+        </div>
       </div>
 
       <QuickOpen

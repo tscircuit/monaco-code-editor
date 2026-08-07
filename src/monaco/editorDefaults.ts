@@ -27,3 +27,21 @@ export const defaultCodeEditorOptions: editor.IStandaloneEditorConstructionOptio
     tabSize: 2,
     wordWrap: "on",
   }
+
+/**
+ * Merge editor options while keeping transient dependency errors out of view.
+ * Monaco's default is `editable`; spelling it out ensures decorations are
+ * restored after a loading pass that temporarily set them to `off`.
+ */
+export function createCodeEditorOptions(
+  options?: editor.IStandaloneEditorConstructionOptions,
+  { suppressValidationDecorations = false } = {},
+): editor.IStandaloneEditorConstructionOptions {
+  return {
+    ...defaultCodeEditorOptions,
+    ...options,
+    renderValidationDecorations: suppressValidationDecorations
+      ? "off"
+      : (options?.renderValidationDecorations ?? "editable"),
+  }
+}
