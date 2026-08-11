@@ -63,7 +63,10 @@ export class MonacoWorkspaceModelManager {
   constructor(options: MonacoWorkspaceModelManagerOptions = {}) {
     this.inferLanguage = options.inferLanguage ?? defaultInferLanguage
     this.toUri = options.toUri ?? defaultToUri
-    this.maxLiveModels = Math.max(1, options.maxLiveModels ?? DEFAULT_MAX_LIVE_MODELS)
+    this.maxLiveModels = Math.max(
+      1,
+      options.maxLiveModels ?? DEFAULT_MAX_LIVE_MODELS,
+    )
   }
 
   getUri(path: string) {

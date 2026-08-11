@@ -73,7 +73,9 @@ export function useWorkspaceModelManager({
 
     setPreparedWorkspaceKey(null)
     const codeModelUris = orderedFiles
-      .filter((file) => isCodeFile(file.path) && manager.hasLiveModel(file.path))
+      .filter(
+        (file) => isCodeFile(file.path) && manager.hasLiveModel(file.path),
+      )
       .map((file) => manager.getUri(file.path))
 
     let isActive = true
