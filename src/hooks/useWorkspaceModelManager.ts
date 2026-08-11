@@ -11,10 +11,12 @@ import {
 import { orderWorkspaceFilesForModelCreation } from "../monaco/workspaceReadiness"
 
 /**
- * Owns the workspace's Monaco model manager. Keeps a live model for every
- * (text) file so the TypeScript language service can resolve cross-file
- * imports and surface diagnostics project-wide, and initializes the
- * TypeScript worker graph once the workspace settles.
+ * Owns the workspace's Monaco model manager. Keeps a live model for the active
+ * file and a bounded, recently-used set of the other files so the TypeScript
+ * language service can resolve cross-file imports and surface diagnostics,
+ * without letting the model count grow past Monaco's listener leak monitor.
+ * Cold files are recreated on demand. Initializes the TypeScript worker graph
+ * once the workspace settles.
  */
 export function useWorkspaceModelManager({
   isReady,
@@ -55,7 +57,7 @@ export function useWorkspaceModelManager({
       workspaceFiles,
       currentFile,
     )
-    manager.syncFiles(orderedFiles)
+    manager.syncFiles(orderedFiles, currentFile)
 
     if (!enableTypeScriptLanguageService) {
       setPreparedWorkspaceKey(null)
@@ -71,7 +73,7 @@ export function useWorkspaceModelManager({
 
     setPreparedWorkspaceKey(null)
     const codeModelUris = orderedFiles
-      .filter((file) => isCodeFile(file.path))
+      .filter((file) => isCodeFile(file.path) && manager.hasLiveModel(file.path))
       .map((file) => manager.getUri(file.path))
 
     let isActive = true
