@@ -42,9 +42,6 @@ function RenameInput({ item }: { item: TreeDataItem }) {
     const input = inputRef.current
     if (!input) return
 
-    // The tree trigger is rendered as a button and can reclaim focus after
-    // the input's autoFocus runs. Focus on the next frame so rename always
-    // opens ready for typing, like VS Code.
     const frame = requestAnimationFrame(() => {
       input.focus()
       selectRenameName(input)
