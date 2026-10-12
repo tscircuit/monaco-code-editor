@@ -29,6 +29,7 @@ import {
   applyWorkspaceReplacements,
   type WorkspaceSearchMatch,
 } from "../utils/workspaceSearch"
+import { BinaryFilePreview } from "./BinaryFilePreview"
 import { Breadcrumbs } from "./Breadcrumbs"
 import { FileSidebar } from "./FileSidebar"
 import { QuickOpen } from "./QuickOpen"
@@ -37,6 +38,7 @@ import { WorkspaceSearch } from "./WorkspaceSearch"
 
 export type EditorFile = {
   path: string
+  /** Text content, or a blob/data URL for a binary file. */
   content: string
   isBinary?: boolean
   downloadUrl?: string
@@ -251,15 +253,18 @@ export const WorkspaceCodeEditor = forwardRef<
 
   let editorBody: React.ReactNode
 
-  if (isStreaming) {
+  if (currentEditorFile?.isBinary) {
+    editorBody = (
+      <BinaryFilePreview
+        key={currentEditorFile.path}
+        file={currentEditorFile}
+      />
+    )
+  } else if (isStreaming) {
     editorBody = (
       <pre className="m-0 h-full overflow-auto whitespace-pre-wrap p-4 font-mono text-xs">
         {currentContent}
       </pre>
-    )
-  } else if (currentFileIsBinary) {
-    editorBody = (
-      <BinaryFileNotice downloadUrl={currentEditorFile?.downloadUrl} />
     )
   } else if (!isReady) {
     editorBody = <CenteredMessage>Loading editor…</CenteredMessage>
@@ -375,26 +380,6 @@ function CenteredMessage({ children }: { children: React.ReactNode }) {
   return (
     <div className="grid h-full place-items-center font-sans text-sm text-slate-400">
       {children}
-    </div>
-  )
-}
-
-function BinaryFileNotice({ downloadUrl }: { downloadUrl?: string }) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 font-sans text-slate-500">
-      <p className="font-semibold">Binary file</p>
-      <p className="text-[13px]">
-        This file cannot be displayed in the editor.
-      </p>
-      {downloadUrl && (
-        <a
-          href={downloadUrl}
-          download
-          className="text-sm text-blue-600 underline underline-offset-2 hover:text-blue-700"
-        >
-          Download file
-        </a>
-      )}
     </div>
   )
 }
