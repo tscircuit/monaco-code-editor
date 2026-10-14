@@ -99,6 +99,25 @@ export const WorkspaceCodeEditor = forwardRef<
   const isReady = useMonacoReady(enableTypeScriptLanguageService)
   const [editorReady, setEditorReady] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    let wasNarrow: boolean | undefined
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry || entry.contentRect.width === 0) return
+      // Leave room for code beside the default 224px file sidebar.
+      const isNarrow = entry.contentRect.width < 480
+      if (isNarrow !== wasNarrow) {
+        setSidebarOpen(!isNarrow)
+        wasNarrow = isNarrow
+      }
+    })
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [])
   const {
     quickOpenOpen,
     setQuickOpenOpen,
@@ -281,6 +300,7 @@ export const WorkspaceCodeEditor = forwardRef<
 
   return (
     <div
+      ref={containerRef}
       className={`workspace-editor-shell flex h-full w-full min-h-0 overflow-hidden ${className ?? ""}`.trim()}
       style={{ height }}
     >
